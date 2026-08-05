@@ -136,3 +136,4 @@ desktop.ini
 /generar-*.ps1
 /aplicar-*.mjs
 '@ | Set-Content ".\.gitignore" -Encoding UTF8
+/modulo-reportes-excel/
