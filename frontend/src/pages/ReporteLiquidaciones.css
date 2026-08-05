@@ -1,0 +1,431 @@
+.reporte-liquidaciones {
+  display: grid;
+  gap: 24px;
+}
+
+.reporte-liquidaciones-cabecera {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.reporte-liquidaciones-cabecera h1 {
+  margin: 4px 0 8px;
+}
+
+.reporte-liquidaciones-cabecera > div > p:last-child {
+  max-width: 760px;
+  margin: 0;
+  color: #64748b;
+  line-height: 1.6;
+}
+
+.reporte-liquidaciones-version {
+  min-width: 270px;
+  display: grid;
+  gap: 5px;
+  padding: 18px 20px;
+  border: 1px solid #ddd6fe;
+  border-radius: 18px;
+  background: linear-gradient(145deg, #f5f3ff, #ffffff);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+}
+
+.reporte-liquidaciones-version span,
+.reporte-liquidaciones-version small {
+  color: #64748b;
+}
+
+.reporte-liquidaciones-version strong {
+  font-size: 1.7rem;
+  color: #6d28d9;
+}
+
+.reporte-liquidaciones-version small {
+  overflow-wrap: anywhere;
+}
+
+.reporte-liquidaciones-alerta {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border-radius: 14px;
+}
+
+.reporte-liquidaciones-alerta button {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-size: 1.25rem;
+}
+
+.reporte-liquidaciones-alerta-error {
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.reporte-liquidaciones-alerta-exito {
+  border: 1px solid #bbf7d0;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.reporte-liquidaciones-panel,
+.reporte-liquidaciones-resultados,
+.reporte-liquidaciones-excel,
+.reporte-liquidaciones-cargando {
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  background: #ffffff;
+  box-shadow: 0 12px 35px rgba(15, 23, 42, 0.05);
+}
+
+.reporte-liquidaciones-panel {
+  padding: 22px;
+}
+
+.reporte-liquidaciones-panel-cabecera,
+.reporte-liquidaciones-resultados > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.reporte-liquidaciones-panel-cabecera h2,
+.reporte-liquidaciones-resultados h2,
+.reporte-liquidaciones-excel h2 {
+  margin: 0 0 6px;
+}
+
+.reporte-liquidaciones-panel-cabecera p,
+.reporte-liquidaciones-resultados header p {
+  margin: 0;
+  color: #64748b;
+}
+
+.reporte-liquidaciones-formulario {
+  display: grid;
+  grid-template-columns: minmax(240px, 2fr) repeat(5, minmax(140px, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.reporte-liquidaciones-campo {
+  display: grid;
+  gap: 7px;
+}
+
+.reporte-liquidaciones-campo span {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #475569;
+}
+
+.reporte-liquidaciones-campo input,
+.reporte-liquidaciones-campo select {
+  width: 100%;
+  min-height: 44px;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #0f172a;
+}
+
+.reporte-liquidaciones-campo input:focus,
+.reporte-liquidaciones-campo select:focus {
+  outline: 3px solid rgba(109, 40, 217, 0.12);
+  border-color: #7c3aed;
+}
+
+.reporte-liquidaciones-boton-aplicar,
+.reporte-liquidaciones-boton-descargar,
+.reporte-liquidaciones-boton-secundario {
+  min-height: 44px;
+  padding: 10px 17px;
+  border-radius: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.reporte-liquidaciones-boton-aplicar {
+  align-self: end;
+  border: 1px solid #6d28d9;
+  background: #7c3aed;
+  color: #ffffff;
+}
+
+.reporte-liquidaciones-boton-descargar {
+  border: 1px solid #047857;
+  background: #059669;
+  color: #ffffff;
+}
+
+.reporte-liquidaciones-boton-secundario {
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+}
+
+.reporte-liquidaciones-boton-aplicar:disabled,
+.reporte-liquidaciones-boton-descargar:disabled,
+.reporte-liquidaciones-boton-secundario:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.reporte-liquidaciones-accesos {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.reporte-liquidaciones-accesos > span {
+  margin-right: 4px;
+  color: #64748b;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.reporte-liquidaciones-accesos button {
+  border: 1px solid #ddd6fe;
+  border-radius: 999px;
+  padding: 7px 11px;
+  background: #f5f3ff;
+  color: #6d28d9;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.reporte-liquidaciones-metricas {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.reporte-liquidaciones-metricas article {
+  display: grid;
+  gap: 7px;
+  min-height: 90px;
+  padding: 18px;
+  border: 1px solid #e2e8f0;
+  border-radius: 17px;
+  background: #ffffff;
+}
+
+.reporte-liquidaciones-metricas span {
+  color: #64748b;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.reporte-liquidaciones-metricas strong {
+  font-size: 1.35rem;
+  color: #0f172a;
+}
+
+.reporte-liquidaciones-resultados {
+  overflow: hidden;
+}
+
+.reporte-liquidaciones-resultados > header {
+  padding: 20px 22px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.reporte-liquidaciones-tabla-contenedor {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.reporte-liquidaciones-tabla {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.reporte-liquidaciones-tabla th,
+.reporte-liquidaciones-tabla td {
+  padding: 13px 15px;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.reporte-liquidaciones-tabla th {
+  background: #f8fafc;
+  color: #475569;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.reporte-liquidaciones-tabla td {
+  color: #334155;
+}
+
+.reporte-liquidaciones-tabla td small {
+  display: block;
+  margin-top: 4px;
+  color: #64748b;
+}
+
+.reporte-liquidaciones-tabla-vista td:nth-child(4) {
+  min-width: 260px;
+  white-space: normal;
+}
+
+.reporte-liquidaciones-estado {
+  display: inline-flex;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #334155;
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.reporte-liquidaciones-estado-pagado {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.reporte-liquidaciones-estado-pago_parcial {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.reporte-liquidaciones-estado-pendiente {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.reporte-liquidaciones-estado-sin_declaracion,
+.reporte-liquidaciones-estado-revisar {
+  background: #ffedd5;
+  color: #9a3412;
+}
+
+.reporte-liquidaciones-estado-anulado,
+.reporte-liquidaciones-estado-pago_anulado {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.reporte-liquidaciones-estado-sobrepago {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+.reporte-liquidaciones-contador {
+  display: inline-flex;
+  padding: 7px 11px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.reporte-liquidaciones-vacio {
+  padding: 34px 22px;
+  text-align: center;
+  color: #64748b;
+}
+
+.reporte-liquidaciones-vacio strong {
+  display: block;
+  margin-bottom: 6px;
+  color: #334155;
+}
+
+.reporte-liquidaciones-cargando {
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  min-height: 180px;
+  padding: 24px;
+  color: #64748b;
+}
+
+.reporte-liquidaciones-excel {
+  padding: 22px;
+}
+
+.reporte-liquidaciones-excel > div {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.reporte-liquidaciones-excel article {
+  padding: 17px;
+  border: 1px solid #e2e8f0;
+  border-radius: 15px;
+  background: #f8fafc;
+}
+
+.reporte-liquidaciones-excel article strong {
+  display: block;
+  margin-bottom: 7px;
+  color: #0f172a;
+}
+
+.reporte-liquidaciones-excel article p {
+  margin: 0;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+@media (max-width: 1350px) {
+  .reporte-liquidaciones-formulario {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .reporte-liquidaciones-busqueda {
+    grid-column: span 2;
+  }
+
+  .reporte-liquidaciones-metricas {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 860px) {
+  .reporte-liquidaciones-cabecera,
+  .reporte-liquidaciones-panel-cabecera,
+  .reporte-liquidaciones-resultados > header {
+    flex-direction: column;
+  }
+
+  .reporte-liquidaciones-version {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .reporte-liquidaciones-formulario,
+  .reporte-liquidaciones-metricas,
+  .reporte-liquidaciones-excel > div {
+    grid-template-columns: 1fr;
+  }
+
+  .reporte-liquidaciones-busqueda {
+    grid-column: auto;
+  }
+
+  .reporte-liquidaciones-boton-aplicar,
+  .reporte-liquidaciones-boton-descargar,
+  .reporte-liquidaciones-boton-secundario {
+    width: 100%;
+  }
+}

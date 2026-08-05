@@ -1,0 +1,138 @@
+﻿cd "D:\Mover a Lugar de Proyectos\sistema-pagos"
+
+@'
+# ==================================================
+# DEPENDENCIAS
+# ==================================================
+
+node_modules/
+**/node_modules/
+
+# ==================================================
+# COMPILACIONES Y CACHÉ
+# ==================================================
+
+dist/
+**/dist/
+
+build/
+**/build/
+
+coverage/
+**/coverage/
+
+.vite/
+**/.vite/
+
+.cache/
+**/.cache/
+
+# ==================================================
+# VARIABLES DE ENTORNO Y CREDENCIALES
+# ==================================================
+
+.env
+.env.*
+!.env.example
+!.env.docker.example
+
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# ==================================================
+# REGISTROS Y ARCHIVOS TEMPORALES
+# ==================================================
+
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+*.tmp
+*.temp
+
+# ==================================================
+# EDITORES Y SISTEMA OPERATIVO
+# ==================================================
+
+.vscode/
+.idea/
+
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ==================================================
+# RESPALDOS, CARGAS Y DATOS LOCALES
+# ==================================================
+
+/backups/
+**/backups/
+
+/uploads/
+**/uploads/
+
+/storage/
+**/storage/
+
+*.dump
+*.backup
+*.bak
+
+# Solo ignora SQL ubicados en la raíz.
+# Los migration.sql de Prisma sí se incluyen.
+/*.sql
+
+# ==================================================
+# PRISMA GENERADO Y COPIAS LOCALES
+# ==================================================
+
+/backend/generated/
+**/.prisma/
+
+/backend/prisma/schema.backup-*.prisma
+/backend/prisma/*.backup*
+
+# NO ignorar:
+# backend/prisma/schema.prisma
+# backend/prisma/seed.ts
+# backend/prisma/migrations/
+
+# ==================================================
+# DATASETS Y REPORTES LOCALES
+# ==================================================
+
+/*.xlsx
+/*.xls
+/*.csv
+/*.txt
+/*.zip
+
+/diagnostico-*
+/revision-*
+
+/Liquidaciones.txt
+/Requerimientos.txt
+/Requerimientos_Manuales_2026.xlsx
+
+# ==================================================
+# ETAPAS, PARCHES E INSTALADORES YA APLICADOS
+# ==================================================
+
+/etapa-*/
+/correccion-*/
+/ajuste-*/
+/reparacion-*/
+/implementacion-*/
+/patch_*/
+/revision-reparacion-*/
+
+/corregir-*.mjs
+/reparar-*.mjs
+/preparar-*.mjs
+/generar-*.ps1
+/aplicar-*.mjs
+'@ | Set-Content ".\.gitignore" -Encoding UTF8

@@ -1,0 +1,657 @@
+import {
+  EstadoConciliacion,
+  Prisma,
+} from "../../generated/prisma/client";
+import {
+  Router,
+  type NextFunction,
+  type Request,
+  type Response,
+} from "express";
+import { prisma } from "../lib/prisma";
+
+const router = Router();
+
+function enteroPositivo(
+  valor: unknown,
+  predeterminado: number,
+): number {
+  const numero = Number(valor);
+
+  if (!Number.isInteger(numero) || numero <= 0) {
+    return predeterminado;
+  }
+
+  return numero;
+}
+
+function normalizarPlacaBusqueda(
+  valor: string,
+): string {
+  const placa = valor
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "");
+
+  if (placa.length === 6) {
+    return `${placa.slice(0, 3)}-${placa.slice(3)}`;
+  }
+
+  return valor.trim();
+}
+
+router.get(
+  "/resumen",
+  async (
+    _req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const requerimientos =
+        await prisma.requerimiento.findMany({
+          select: {
+            estado: true,
+            importeTotal: true,
+            totalPagado: true,
+            saldo: true,
+          },
+        });
+
+      const porEstado = new Map<
+        EstadoConciliacion,
+        {
+          estado: EstadoConciliacion;
+          cantidad: number;
+          importeTotal: number;
+          totalPagado: number;
+          saldo: number;
+        }
+      >();
+
+      let importeTotal = 0;
+      let totalPagado = 0;
+      let saldo = 0;
+
+      for (const requerimiento of requerimientos) {
+        const importe = Number(
+          requerimiento.importeTotal,
+        );
+        const pagado = Number(
+          requerimiento.totalPagado,
+        );
+        const pendiente = Number(
+          requerimiento.saldo,
+        );
+
+        importeTotal += importe;
+        totalPagado += pagado;
+        saldo += pendiente;
+
+        const actual =
+          porEstado.get(
+            requerimiento.estado,
+          ) ?? {
+            estado:
+              requerimiento.estado,
+            cantidad: 0,
+            importeTotal: 0,
+            totalPagado: 0,
+            saldo: 0,
+          };
+
+        actual.cantidad += 1;
+        actual.importeTotal += importe;
+        actual.totalPagado += pagado;
+        actual.saldo += pendiente;
+
+        porEstado.set(
+          requerimiento.estado,
+          actual,
+        );
+      }
+
+      res.status(200).json({
+        ok: true,
+        data: {
+          totalRequerimientos:
+            requerimientos.length,
+          montos: {
+            importeTotal,
+            totalPagado,
+            saldo,
+          },
+          requerimientosPorEstado:
+            Array.from(
+              porEstado.values(),
+            ).sort((a, b) =>
+              a.estado.localeCompare(
+                b.estado,
+              ),
+            ),
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+router.get(
+  "/",
+  async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const pagina = enteroPositivo(
+        req.query.pagina,
+        1,
+      );
+
+      const limite = Math.min(
+        enteroPositivo(
+          req.query.limite,
+          20,
+        ),
+        100,
+      );
+
+      const buscar = String(
+        req.query.buscar ?? "",
+      ).trim();
+
+      const estadoTexto = String(
+        req.query.estado ?? "",
+      ).trim();
+
+      const anioRequerimiento = Number(
+        req.query.anioRequerimiento,
+      );
+
+      const periodoAnio = Number(
+        req.query.periodoAnio,
+      );
+
+      const where:
+        Prisma.RequerimientoWhereInput = {};
+
+      if (buscar) {
+        const placaNormalizada =
+          normalizarPlacaBusqueda(
+            buscar,
+          );
+
+        where.OR = [
+          {
+            numeroRequerimiento: {
+              contains: buscar,
+              mode: "insensitive",
+            },
+          },
+          {
+            dniRucOriginal: {
+              contains: buscar,
+              mode: "insensitive",
+            },
+          },
+          {
+            nombreOriginal: {
+              contains: buscar,
+              mode: "insensitive",
+            },
+          },
+          {
+            placa: {
+              contains: buscar,
+              mode: "insensitive",
+            },
+          },
+          {
+            placa: {
+              contains:
+                placaNormalizada,
+              mode: "insensitive",
+            },
+          },
+          {
+            idOrigen: {
+              contains: buscar,
+              mode: "insensitive",
+            },
+          },
+        ];
+      }
+
+      if (
+        Object.values(
+          EstadoConciliacion,
+        ).includes(
+          estadoTexto as
+            EstadoConciliacion,
+        )
+      ) {
+        where.estado =
+          estadoTexto as
+            EstadoConciliacion;
+      }
+
+      if (
+        Number.isInteger(
+          anioRequerimiento,
+        )
+      ) {
+        where.anioRequerimiento =
+          anioRequerimiento;
+      }
+
+      if (
+        Number.isInteger(periodoAnio)
+      ) {
+        where.detalles = {
+          some: {
+            periodoAnio,
+          },
+        };
+      }
+
+      const [total, requerimientos] =
+        await Promise.all([
+          prisma.requerimiento.count({
+            where,
+          }),
+
+          prisma.requerimiento.findMany({
+            where,
+            skip:
+              (pagina - 1) * limite,
+            take: limite,
+            orderBy: [
+              {
+                anioRequerimiento:
+                  "desc",
+              },
+              {
+                numeroRequerimiento:
+                  "desc",
+              },
+            ],
+            include: {
+              contribuyente: {
+                select: {
+                  id: true,
+                  numeroDocumento: true,
+                  nombreRazonSocial: true,
+                },
+              },
+              _count: {
+                select: {
+                  detalles: true,
+                },
+              },
+            },
+          }),
+        ]);
+
+      res.status(200).json({
+        ok: true,
+        data: {
+          registros:
+            requerimientos.map(
+              (requerimiento) => ({
+                id: requerimiento.id,
+                anioRequerimiento:
+                  requerimiento
+                    .anioRequerimiento,
+                numeroRequerimiento:
+                  requerimiento
+                    .numeroRequerimiento,
+                fechaEmision:
+                  requerimiento
+                    .fechaEmision,
+                dniRuc:
+                  requerimiento
+                    .dniRucOriginal,
+                nombre:
+                  requerimiento
+                    .nombreOriginal,
+                placa:
+                  requerimiento.placa,
+                periodo:
+                  requerimiento
+                    .periodoOriginal,
+                importeTotal:
+                  Number(
+                    requerimiento
+                      .importeTotal,
+                  ),
+                totalPagado:
+                  Number(
+                    requerimiento
+                      .totalPagado,
+                  ),
+                saldo:
+                  Number(
+                    requerimiento.saldo,
+                  ),
+                estado:
+                  requerimiento.estado,
+                estadoOriginal:
+                  requerimiento
+                    .estadoOriginal,
+                cantidadDetalles:
+                  requerimiento._count
+                    .detalles,
+                contribuyente:
+                  requerimiento
+                    .contribuyente,
+              }),
+            ),
+
+          paginacion: {
+            pagina,
+            limite,
+            total,
+            totalPaginas:
+              Math.ceil(
+                total / limite,
+              ),
+          },
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+router.get(
+  "/:id",
+  async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const id = Number(
+        req.params.id,
+      );
+
+      if (
+        !Number.isInteger(id) ||
+        id <= 0
+      ) {
+        res.status(400).json({
+          ok: false,
+          message:
+            "El identificador del requerimiento no es válido.",
+        });
+        return;
+      }
+
+      const requerimiento =
+        await prisma.requerimiento.findUnique({
+          where: {
+            id,
+          },
+          include: {
+            contribuyente: true,
+            detalles: {
+              orderBy: [
+                {
+                  periodoAnio: "asc",
+                },
+                {
+                  trimestreDesde:
+                    "asc",
+                },
+              ],
+              include: {
+                declaracion: {
+                  include: {
+                    recibos: {
+                      orderBy: [
+                        {
+                          trimestreDesde:
+                            "asc",
+                        },
+                        {
+                          numeroRecibo:
+                            "asc",
+                        },
+                      ],
+                    },
+                  },
+                },
+              },
+            },
+          },
+        });
+
+      if (!requerimiento) {
+        res.status(404).json({
+          ok: false,
+          message:
+            "No se encontró el requerimiento solicitado.",
+        });
+        return;
+      }
+
+      res.status(200).json({
+        ok: true,
+        data: {
+          id: requerimiento.id,
+          anioRequerimiento:
+            requerimiento
+              .anioRequerimiento,
+          numeroRequerimiento:
+            requerimiento
+              .numeroRequerimiento,
+          idOrigen:
+            requerimiento.idOrigen,
+          fechaEmision:
+            requerimiento.fechaEmision,
+          dniRuc:
+            requerimiento
+              .dniRucOriginal,
+          nombre:
+            requerimiento
+              .nombreOriginal,
+          direccion:
+            requerimiento
+              .direccionOriginal,
+          placa: requerimiento.placa,
+          fechaSunarp:
+            requerimiento.fechaSunarp,
+          estadoOriginal:
+            requerimiento
+              .estadoOriginal,
+          periodoOriginal:
+            requerimiento
+              .periodoOriginal,
+          importeTotal:
+            Number(
+              requerimiento
+                .importeTotal,
+            ),
+          totalPagado:
+            Number(
+              requerimiento
+                .totalPagado,
+            ),
+          saldo:
+            Number(
+              requerimiento.saldo,
+            ),
+          estado:
+            requerimiento.estado,
+          fechaGeneracion:
+            requerimiento
+              .fechaGeneracion,
+          contribuyente:
+            requerimiento
+              .contribuyente,
+
+          detalles:
+            requerimiento.detalles.map(
+              (detalle) => ({
+                id: detalle.id,
+                periodoAnio:
+                  detalle.periodoAnio,
+                periodoOriginal:
+                  detalle
+                    .periodoOriginal,
+                trimestreDesde:
+                  detalle
+                    .trimestreDesde,
+                trimestreHasta:
+                  detalle
+                    .trimestreHasta,
+                valorReferencial:
+                  detalle
+                    .valorReferencial ===
+                  null
+                    ? null
+                    : Number(
+                        detalle
+                          .valorReferencial,
+                      ),
+                anioFabricacion:
+                  detalle
+                    .anioFabricacion,
+                uit:
+                  detalle.uit === null
+                    ? null
+                    : Number(
+                        detalle.uit,
+                      ),
+                baseImponible:
+                  detalle
+                    .baseImponible ===
+                  null
+                    ? null
+                    : Number(
+                        detalle
+                          .baseImponible,
+                      ),
+                impuesto:
+                  detalle.impuesto ===
+                  null
+                    ? null
+                    : Number(
+                        detalle
+                          .impuesto,
+                      ),
+                reajuste:
+                  detalle.reajuste ===
+                  null
+                    ? null
+                    : Number(
+                        detalle
+                          .reajuste,
+                      ),
+                interes:
+                  detalle.interes ===
+                  null
+                    ? null
+                    : Number(
+                        detalle
+                          .interes,
+                      ),
+                gastosAdmin:
+                  detalle.gastosAdmin ===
+                  null
+                    ? null
+                    : Number(
+                        detalle
+                          .gastosAdmin,
+                      ),
+                totalPeriodo:
+                  Number(
+                    detalle
+                      .totalPeriodo,
+                  ),
+                montoPagado:
+                  Number(
+                    detalle
+                      .montoPagado,
+                  ),
+                saldo:
+                  Number(
+                    detalle.saldo,
+                  ),
+                estado:
+                  detalle.estado,
+                observacion:
+                  detalle.observacion,
+
+                declaracion:
+                  detalle.declaracion
+                    ? {
+                        id:
+                          detalle
+                            .declaracion
+                            .id,
+                        anioDeclaracion:
+                          detalle
+                            .declaracion
+                            .anioDeclaracion,
+                        numeroDeclaracion:
+                          detalle
+                            .declaracion
+                            .numeroDeclaracion,
+                        estadoConciliacion:
+                          detalle
+                            .declaracion
+                            .estadoConciliacion,
+                        recibos:
+                          detalle
+                            .declaracion
+                            .recibos.map(
+                              (recibo) => ({
+                                id:
+                                  recibo.id,
+                                anioRecibo:
+                                  recibo
+                                    .anioRecibo,
+                                numeroRecibo:
+                                  recibo
+                                    .numeroRecibo,
+                                monto:
+                                  Number(
+                                    recibo
+                                      .monto,
+                                  ),
+                                trimestre:
+                                  recibo
+                                    .trimestreOriginal,
+                                trimestreDesde:
+                                  recibo
+                                    .trimestreDesde,
+                                trimestreHasta:
+                                  recibo
+                                    .trimestreHasta,
+                                estadoOriginal:
+                                  recibo
+                                    .estadoOriginal,
+                                activo:
+                                  recibo
+                                    .activo,
+                              }),
+                            ),
+                      }
+                    : null,
+              }),
+            ),
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+export {
+  router as requerimientosRouter,
+};

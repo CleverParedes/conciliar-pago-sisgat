@@ -1,0 +1,1128 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum EstadoConciliacion {
+  PENDIENTE
+  PAGO_PARCIAL
+  PAGADO
+  SOBREPAGO
+  SIN_DECLARACION
+  PAGO_ANULADO
+  ANULADO
+  REVISAR
+}
+
+enum TipoImportacion {
+  ORDENES
+  LIQUIDACIONES
+  REQUERIMIENTOS
+  REQUERIMIENTOS_MANUALES
+  PAGOS
+  DECLARACIONES_PAGOS
+}
+
+enum ModoImportacion {
+  HISTORICA
+  INCREMENTAL
+}
+
+enum TipoFechaFiltro {
+  NO_ESPECIFICADO
+  FECHA_DECLARACION
+  FECHA_RECIBO
+  FECHA_CREACION
+  FECHA_MODIFICACION
+  CREACION_O_MODIFICACION
+}
+
+enum OrigenImportacion {
+  MANUAL
+  DRIVE
+}
+
+enum EstadoImportacion {
+  PROCESANDO
+  COMPLETADA
+  COMPLETADA_CON_ERRORES
+  FALLIDA
+}
+
+enum EstadoVersionDatos {
+  PENDIENTE
+  VALIDADA
+  APLICANDO
+  ACTIVA
+  ARCHIVADA
+  FALLIDA
+  CANCELADA
+}
+
+enum TipoArchivoVersion {
+  ORDENES
+  DECLARACIONES_PAGOS
+}
+
+
+enum TipoRegistroManual {
+  REGISTRO_COMPLETO
+  INCOMPLETO
+  VACIO
+  SIN_REGISTRO
+  ANULADO
+}
+
+enum EstadoConciliacionManual {
+  PENDIENTE
+  PAGO_PARCIAL
+  PAGADO
+  SIN_DECLARACION
+  ANULADO
+  NO_APLICA
+  REVISAR
+}
+
+enum EstadoRevisionManual {
+  PENDIENTE
+  COINCIDE
+  DISCREPANCIA
+  REVISAR
+  NO_APLICA
+}
+
+enum EstadoNotificacionManual {
+  SIN_ASIGNAR
+  ASIGNADO
+  PENDIENTE_NOTIFICACION
+  NOTIFICADO
+  NO_NOTIFICADO
+  OBSERVADO
+}
+
+model Contribuyente {
+  id                Int      @id @default(autoincrement())
+  codigo            String?  @unique @db.VarChar(40)
+  tipoDocumento     String?  @map("tipo_documento") @db.VarChar(20)
+  numeroDocumento   String?  @unique @map("numero_documento") @db.VarChar(30)
+  nombreRazonSocial String   @map("nombre_razon_social") @db.VarChar(250)
+  direccion         String?
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  ordenes        OrdenPago[]
+  liquidaciones  Liquidacion[]
+  requerimientos Requerimiento[]
+  declaraciones  Declaracion[]
+
+  @@index([nombreRazonSocial])
+  @@map("contribuyentes")
+}
+
+model OrdenPago {
+  id                Int                @id @default(autoincrement())
+  anioOrden         Int                @map("anio_orden")
+  numeroOrden       String             @map("numero_orden") @db.VarChar(60)
+  idOrigen          String?            @map("id_origen") @db.VarChar(60)
+  fechaEmision      DateTime?          @map("fecha_emision") @db.Date
+  contribuyenteId   Int?               @map("contribuyente_id")
+  dniRucOriginal    String?            @map("dni_ruc_original") @db.VarChar(30)
+  nombreOriginal    String?            @map("nombre_original") @db.VarChar(250)
+  direccionOriginal String?            @map("direccion_original")
+  placa             String?            @db.VarChar(20)
+  fechaSunarp       DateTime?          @map("fecha_sunarp") @db.Date
+  activoOriginal    Int?               @map("activo_original")
+  periodoOriginal   String?            @map("periodo_original")
+  importeTotal      Decimal            @map("importe_total") @db.Decimal(14, 2)
+  totalPagado       Decimal            @default(0) @map("total_pagado") @db.Decimal(14, 2)
+  saldo             Decimal            @default(0) @db.Decimal(14, 2)
+  estado            EstadoConciliacion @default(PENDIENTE)
+  archivoOrigen     String?            @map("archivo_origen")
+  filaOrigen        Int?               @map("fila_origen")
+  datosOriginales   Json?              @map("datos_originales")
+  importacionId     Int?               @map("importacion_id")
+  versionDatosId    Int?               @map("version_datos_id")
+  versionOrdenesId  Int?               @map("version_ordenes_id")
+  createdAt         DateTime           @default(now()) @map("created_at")
+  updatedAt         DateTime           @updatedAt @map("updated_at")
+
+  contribuyente Contribuyente? @relation(fields: [contribuyenteId], references: [id], onDelete: SetNull)
+  importacion   Importacion?   @relation(fields: [importacionId], references: [id], onDelete: SetNull)
+  versionDatos   VersionDatos?   @relation(fields: [versionDatosId], references: [id], onDelete: SetNull)
+  versionOrdenes VersionOrdenes? @relation(fields: [versionOrdenesId], references: [id], onDelete: SetNull)
+  detalles      OrdenDetalle[]
+
+  @@unique([anioOrden, numeroOrden])
+  @@index([contribuyenteId])
+  @@index([dniRucOriginal])
+  @@index([placa])
+  @@index([estado])
+  @@index([anioOrden])
+  @@index([importacionId])
+  @@index([versionDatosId])
+  @@index([versionOrdenesId])
+  @@map("ordenes_pago")
+}
+
+model OrdenDetalle {
+  id               Int                @id @default(autoincrement())
+  ordenId          Int                @map("orden_id")
+  declaracionId    Int?               @map("declaracion_id")
+  periodoAnio      Int                @map("periodo_anio")
+  periodoOriginal  String?            @map("periodo_original") @db.VarChar(50)
+  trimestreDesde   Int                @map("trimestre_desde")
+  trimestreHasta   Int                @map("trimestre_hasta")
+  valorReferencial Decimal?           @map("valor_referencial") @db.Decimal(14, 2)
+  anioFabricacion  Int?               @map("anio_fabricacion")
+  uit              Decimal?           @db.Decimal(14, 2)
+  baseImponible    Decimal?           @map("base_imponible") @db.Decimal(14, 2)
+  impuesto         Decimal?           @db.Decimal(14, 2)
+  reajuste         Decimal?           @db.Decimal(14, 2)
+  interes          Decimal?           @db.Decimal(14, 2)
+  gastosAdmin      Decimal?           @map("gastos_admin") @db.Decimal(14, 2)
+  totalPeriodo     Decimal            @map("total_periodo") @db.Decimal(14, 2)
+  montoPagado      Decimal            @default(0) @map("monto_pagado") @db.Decimal(14, 2)
+  saldo            Decimal            @default(0) @db.Decimal(14, 2)
+  estado           EstadoConciliacion @default(PENDIENTE)
+  observacion      String?
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
+
+  orden       OrdenPago    @relation(fields: [ordenId], references: [id], onDelete: Cascade)
+  declaracion Declaracion? @relation(fields: [declaracionId], references: [id], onDelete: SetNull)
+
+  @@unique([ordenId, periodoAnio, trimestreDesde, trimestreHasta])
+  @@index([ordenId])
+  @@index([declaracionId])
+  @@index([periodoAnio])
+  @@index([estado])
+  @@map("ordenes_detalle")
+}
+
+model Liquidacion {
+  id                      Int                @id @default(autoincrement())
+  anioLiquidacion         Int                @map("anio_liquidacion")
+  numeroLiquidacion       String             @map("numero_liquidacion") @db.VarChar(60)
+  idOrigen                String?            @map("id_origen") @db.VarChar(60)
+  fechaEmision            DateTime?          @map("fecha_emision") @db.Date
+  contribuyenteId         Int?               @map("contribuyente_id")
+  dniRucOriginal          String?            @map("dni_ruc_original") @db.VarChar(30)
+  nombreOriginal          String?            @map("nombre_original") @db.VarChar(250)
+  direccionOriginal       String?            @map("direccion_original")
+  placa                   String?            @db.VarChar(20)
+  fechaSunarp             DateTime?          @map("fecha_sunarp") @db.Date
+  estadoOriginal          String?            @map("estado_original") @db.VarChar(40)
+  periodoOriginal         String?            @map("periodo_original")
+  importeTotal            Decimal            @map("importe_total") @db.Decimal(14, 2)
+  totalPagado             Decimal            @default(0) @map("total_pagado") @db.Decimal(14, 2)
+  saldo                   Decimal            @default(0) @db.Decimal(14, 2)
+  estado                  EstadoConciliacion @default(PENDIENTE)
+  usuarioCreacion         String?            @map("usuario_creacion") @db.VarChar(100)
+  fechaCreacionOrigen     DateTime?          @map("fecha_creacion_origen")
+  usuarioModificacion     String?            @map("usuario_modificacion") @db.VarChar(100)
+  fechaModificacionOrigen DateTime?          @map("fecha_modificacion_origen")
+  fechaGeneracion         DateTime?          @map("fecha_generacion") @db.Date
+  anioRVeh                Int?               @map("anio_r_veh")
+  numeroRVeh              String?            @map("numero_r_veh") @db.VarChar(60)
+  archivoOrigen           String?            @map("archivo_origen")
+  filaOrigen              Int?               @map("fila_origen")
+  datosOriginales         Json?              @map("datos_originales")
+  importacionId           Int?               @map("importacion_id")
+  versionLiquidacionesId  Int?               @map("version_liquidaciones_id")
+  createdAt               DateTime           @default(now()) @map("created_at")
+  updatedAt               DateTime           @updatedAt @map("updated_at")
+
+  contribuyente        Contribuyente?        @relation(fields: [contribuyenteId], references: [id], onDelete: SetNull)
+  importacion          Importacion?          @relation(fields: [importacionId], references: [id], onDelete: SetNull)
+  versionLiquidaciones VersionLiquidaciones? @relation(fields: [versionLiquidacionesId], references: [id], onDelete: SetNull)
+  detalles             LiquidacionDetalle[]
+
+  @@unique([anioLiquidacion, numeroLiquidacion])
+  @@index([contribuyenteId])
+  @@index([dniRucOriginal])
+  @@index([placa])
+  @@index([estado])
+  @@index([anioLiquidacion])
+  @@index([importacionId])
+  @@index([versionLiquidacionesId])
+  @@map("liquidaciones")
+}
+
+model LiquidacionDetalle {
+  id               Int                @id @default(autoincrement())
+  liquidacionId    Int                @map("liquidacion_id")
+  declaracionId    Int?               @map("declaracion_id")
+  periodoAnio      Int                @map("periodo_anio")
+  periodoOriginal  String?            @map("periodo_original") @db.VarChar(50)
+  trimestreDesde   Int                @map("trimestre_desde")
+  trimestreHasta   Int                @map("trimestre_hasta")
+  valorReferencial Decimal?           @map("valor_referencial") @db.Decimal(14, 2)
+  anioFabricacion  Int?               @map("anio_fabricacion")
+  uit              Decimal?           @db.Decimal(14, 2)
+  baseImponible    Decimal?           @map("base_imponible") @db.Decimal(14, 2)
+  impuesto         Decimal?           @db.Decimal(14, 2)
+  reajuste         Decimal?           @db.Decimal(14, 2)
+  interes          Decimal?           @db.Decimal(14, 2)
+  gastosAdmin      Decimal?           @map("gastos_admin") @db.Decimal(14, 2)
+  totalPeriodo     Decimal            @map("total_periodo") @db.Decimal(14, 2)
+  montoPagado      Decimal            @default(0) @map("monto_pagado") @db.Decimal(14, 2)
+  saldo            Decimal            @default(0) @db.Decimal(14, 2)
+  estado           EstadoConciliacion @default(PENDIENTE)
+  observacion      String?
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
+
+  liquidacion Liquidacion  @relation(fields: [liquidacionId], references: [id], onDelete: Cascade)
+  declaracion Declaracion? @relation(fields: [declaracionId], references: [id], onDelete: SetNull)
+
+  @@unique([liquidacionId, periodoAnio, trimestreDesde, trimestreHasta])
+  @@index([liquidacionId])
+  @@index([declaracionId])
+  @@index([periodoAnio])
+  @@index([estado])
+  @@map("liquidaciones_detalle")
+}
+
+
+model Requerimiento {
+  id                       Int                @id @default(autoincrement())
+  anioRequerimiento        Int                @map("anio_requerimiento")
+  numeroRequerimiento      String             @map("numero_requerimiento") @db.VarChar(60)
+  idOrigen                 String?            @map("id_origen") @db.VarChar(60)
+  fechaEmision             DateTime?          @map("fecha_emision") @db.Date
+  contribuyenteId          Int?               @map("contribuyente_id")
+  dniRucOriginal           String?            @map("dni_ruc_original") @db.VarChar(30)
+  nombreOriginal           String?            @map("nombre_original") @db.VarChar(250)
+  direccionOriginal        String?            @map("direccion_original")
+  placa                    String?            @db.VarChar(20)
+  fechaSunarp              DateTime?          @map("fecha_sunarp") @db.Date
+  estadoOriginal           String?            @map("estado_original") @db.VarChar(40)
+  periodoOriginal          String?            @map("periodo_original")
+  importeTotal             Decimal            @map("importe_total") @db.Decimal(14, 2)
+  totalPagado              Decimal            @default(0) @map("total_pagado") @db.Decimal(14, 2)
+  saldo                    Decimal            @default(0) @db.Decimal(14, 2)
+  estado                   EstadoConciliacion @default(PENDIENTE)
+  usuarioCreacion          String?            @map("usuario_creacion") @db.VarChar(100)
+  fechaCreacionOrigen      DateTime?          @map("fecha_creacion_origen")
+  usuarioModificacion      String?            @map("usuario_modificacion") @db.VarChar(100)
+  fechaModificacionOrigen  DateTime?          @map("fecha_modificacion_origen")
+  fechaGeneracion          DateTime?          @map("fecha_generacion") @db.Date
+  archivoOrigen            String?            @map("archivo_origen")
+  filaOrigen               Int?               @map("fila_origen")
+  datosOriginales          Json?              @map("datos_originales")
+  importacionId            Int?               @map("importacion_id")
+  versionRequerimientosId  Int?               @map("version_requerimientos_id")
+  createdAt                DateTime           @default(now()) @map("created_at")
+  updatedAt                DateTime           @updatedAt @map("updated_at")
+
+  contribuyente         Contribuyente?         @relation(fields: [contribuyenteId], references: [id], onDelete: SetNull)
+  importacion           Importacion?           @relation(fields: [importacionId], references: [id], onDelete: SetNull)
+  versionRequerimientos VersionRequerimientos? @relation(fields: [versionRequerimientosId], references: [id], onDelete: SetNull)
+  detalles              RequerimientoDetalle[]
+
+  @@unique([anioRequerimiento, numeroRequerimiento])
+  @@index([contribuyenteId])
+  @@index([dniRucOriginal])
+  @@index([placa])
+  @@index([estado])
+  @@index([anioRequerimiento])
+  @@index([importacionId])
+  @@index([versionRequerimientosId])
+  @@map("requerimientos")
+}
+
+model RequerimientoDetalle {
+  id               Int                @id @default(autoincrement())
+  requerimientoId  Int                @map("requerimiento_id")
+  declaracionId    Int?               @map("declaracion_id")
+  periodoAnio      Int                @map("periodo_anio")
+  periodoOriginal  String?            @map("periodo_original") @db.VarChar(50)
+  trimestreDesde   Int                @map("trimestre_desde")
+  trimestreHasta   Int                @map("trimestre_hasta")
+  valorReferencial Decimal?           @map("valor_referencial") @db.Decimal(14, 2)
+  anioFabricacion  Int?               @map("anio_fabricacion")
+  uit              Decimal?           @db.Decimal(14, 2)
+  baseImponible    Decimal?           @map("base_imponible") @db.Decimal(14, 2)
+  impuesto         Decimal?           @db.Decimal(14, 2)
+  reajuste         Decimal?           @db.Decimal(14, 2)
+  interes          Decimal?           @db.Decimal(14, 2)
+  gastosAdmin      Decimal?           @map("gastos_admin") @db.Decimal(14, 2)
+  totalPeriodo     Decimal            @map("total_periodo") @db.Decimal(14, 2)
+  montoPagado      Decimal            @default(0) @map("monto_pagado") @db.Decimal(14, 2)
+  saldo            Decimal            @default(0) @db.Decimal(14, 2)
+  estado           EstadoConciliacion @default(PENDIENTE)
+  observacion      String?
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
+
+  requerimiento Requerimiento @relation(fields: [requerimientoId], references: [id], onDelete: Cascade)
+  declaracion   Declaracion?   @relation(fields: [declaracionId], references: [id], onDelete: SetNull)
+
+  @@unique([requerimientoId, periodoAnio, trimestreDesde, trimestreHasta])
+  @@index([requerimientoId])
+  @@index([declaracionId])
+  @@index([periodoAnio])
+  @@index([estado])
+  @@map("requerimientos_detalle")
+}
+
+
+model RequerimientoManual {
+  id                              Int                        @id @default(autoincrement())
+  anioGestion                     Int                        @map("anio_gestion")
+  numeroRequerimiento             String                     @map("numero_requerimiento") @db.VarChar(60)
+  correlativoExcel                Int?                       @map("correlativo_excel")
+  placaOriginal                   String?                    @map("placa_original") @db.VarChar(40)
+  placaNormalizada                String?                    @map("placa_normalizada") @db.VarChar(20)
+  fechaRequerimiento              DateTime?                  @map("fecha_requerimiento") @db.Date
+  anioVehiculoOriginal            String?                    @map("anio_vehiculo_original") @db.VarChar(60)
+  anioVehiculo                    Int?                       @map("anio_vehiculo")
+  deudaOriginal                   String?                    @map("deuda_original")
+  propietarioOriginal             String?                    @map("propietario_original") @db.VarChar(300)
+  estadoManualOriginal            String?                    @map("estado_manual_original") @db.VarChar(250)
+  provinciaOriginal               String?                    @map("provincia_original") @db.VarChar(150)
+  distritoOriginal                String?                    @map("distrito_original") @db.VarChar(150)
+  direccionOriginal               String?                    @map("direccion_original")
+  notificadorOriginal             String?                    @map("notificador_original") @db.VarChar(150)
+  observacionesOriginal           String?                    @map("observaciones_original")
+  numeroLiquidacionDeudaOriginal  String?                    @map("numero_liquidacion_deuda_original") @db.VarChar(100)
+  fechaNotificacionOriginal       DateTime?                  @map("fecha_notificacion_original") @db.Date
+  numeroCedulonOriginal           String?                    @map("numero_cedulon_original") @db.VarChar(150)
+  responsableOriginal             String?                    @map("responsable_original") @db.VarChar(150)
+  tipoRegistro                    TipoRegistroManual         @default(INCOMPLETO) @map("tipo_registro")
+  estadoConciliado                EstadoConciliacionManual   @default(REVISAR) @map("estado_conciliado")
+  estadoRevision                  EstadoRevisionManual       @default(PENDIENTE) @map("estado_revision")
+  estadoNotificacion              EstadoNotificacionManual   @default(SIN_ASIGNAR) @map("estado_notificacion")
+  notificadorActual               String?                    @map("notificador_actual") @db.VarChar(150)
+  responsableActual               String?                    @map("responsable_actual") @db.VarChar(150)
+  numeroLiquidacionDeudaActual    String?                    @map("numero_liquidacion_deuda_actual") @db.VarChar(100)
+  fechaNotificacionActual         DateTime?                  @map("fecha_notificacion_actual") @db.Date
+  numeroCedulonActual             String?                    @map("numero_cedulon_actual") @db.VarChar(150)
+  observacionSeguimiento          String?                    @map("observacion_seguimiento")
+  archivoOrigen                   String?                    @map("archivo_origen")
+  filaOrigen                      Int?                       @map("fila_origen")
+  datosOriginales                 Json?                      @map("datos_originales")
+  importacionId                   Int?                       @map("importacion_id")
+  versionRequerimientosManualesId Int?                       @map("version_requerimientos_manuales_id")
+  createdAt                       DateTime                   @default(now()) @map("created_at")
+  updatedAt                       DateTime                   @updatedAt @map("updated_at")
+
+  importacion                   Importacion?                    @relation(fields: [importacionId], references: [id], onDelete: SetNull)
+  versionRequerimientosManuales VersionRequerimientosManuales? @relation(fields: [versionRequerimientosManualesId], references: [id], onDelete: SetNull)
+  periodos                      RequerimientoManualPeriodo[]
+  seguimientos                  SeguimientoRequerimientoManual[]
+  historial                     HistorialRequerimientoManual[]
+
+  @@unique([anioGestion, numeroRequerimiento])
+  @@index([placaNormalizada])
+  @@index([fechaRequerimiento])
+  @@index([tipoRegistro])
+  @@index([estadoConciliado])
+  @@index([estadoRevision])
+  @@index([estadoNotificacion])
+  @@index([notificadorActual])
+  @@index([responsableActual])
+  @@index([importacionId])
+  @@index([versionRequerimientosManualesId])
+  @@map("requerimientos_manuales")
+}
+
+model RequerimientoManualPeriodo {
+  id                    Int                      @id @default(autoincrement())
+  requerimientoManualId Int                      @map("requerimiento_manual_id")
+  declaracionId         Int?                     @map("declaracion_id")
+  periodoAnio           Int                      @map("periodo_anio")
+  estadoConciliado      EstadoConciliacionManual @default(REVISAR) @map("estado_conciliado")
+  montoPagado           Decimal                  @default(0) @map("monto_pagado") @db.Decimal(14, 2)
+  observacion           String?
+  createdAt             DateTime                 @default(now()) @map("created_at")
+  updatedAt             DateTime                 @updatedAt @map("updated_at")
+
+  requerimientoManual RequerimientoManual @relation(fields: [requerimientoManualId], references: [id], onDelete: Cascade)
+  declaracion         Declaracion?         @relation(fields: [declaracionId], references: [id], onDelete: SetNull)
+
+  @@unique([requerimientoManualId, periodoAnio])
+  @@index([requerimientoManualId])
+  @@index([declaracionId])
+  @@index([periodoAnio])
+  @@index([estadoConciliado])
+  @@map("requerimientos_manuales_periodos")
+}
+
+model SeguimientoRequerimientoManual {
+  id                           Int                      @id @default(autoincrement())
+  requerimientoManualId        Int                      @map("requerimiento_manual_id")
+  usuarioId                    Int?                     @map("usuario_id")
+  estadoNotificacion           EstadoNotificacionManual @map("estado_notificacion")
+  notificador                  String?                  @db.VarChar(150)
+  responsable                  String?                  @db.VarChar(150)
+  numeroLiquidacionDeuda       String?                  @map("numero_liquidacion_deuda") @db.VarChar(100)
+  fechaNotificacion            DateTime?                @map("fecha_notificacion") @db.Date
+  numeroCedulon                String?                  @map("numero_cedulon") @db.VarChar(150)
+  observacion                  String?
+  createdAt                    DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  requerimientoManual RequerimientoManual @relation(fields: [requerimientoManualId], references: [id], onDelete: Cascade)
+  usuario             Usuario?             @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+
+  @@index([requerimientoManualId, createdAt])
+  @@index([usuarioId])
+  @@index([estadoNotificacion])
+  @@map("seguimientos_requerimientos_manuales")
+}
+
+model HistorialRequerimientoManual {
+  id                    Int      @id @default(autoincrement())
+  requerimientoManualId Int      @map("requerimiento_manual_id")
+  usuarioId             Int?     @map("usuario_id")
+  accion                String   @db.VarChar(100)
+  campo                 String?  @db.VarChar(120)
+  valorAnterior         String?  @map("valor_anterior")
+  valorNuevo            String?  @map("valor_nuevo")
+  motivo                String?
+  detalles              Json?
+  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  requerimientoManual RequerimientoManual @relation(fields: [requerimientoManualId], references: [id], onDelete: Cascade)
+  usuario             Usuario?             @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+
+  @@index([requerimientoManualId, createdAt])
+  @@index([usuarioId])
+  @@index([accion])
+  @@map("historial_requerimientos_manuales")
+}
+
+model Declaracion {
+  id                 Int                @id @default(autoincrement())
+  anioDeclaracion    Int                @map("anio_declaracion")
+  numeroDeclaracion  String             @map("numero_declaracion") @db.VarChar(60)
+  anioRecepcion      Int?               @map("anio_recepcion")
+  numeroRecepcion    String?            @map("numero_recepcion") @db.VarChar(60)
+  contribuyenteId    Int?               @map("contribuyente_id")
+  dniRuc             String?            @map("dni_ruc") @db.VarChar(30)
+  nombresRazonSocial String?            @map("nombres_razon_social") @db.VarChar(250)
+  direccionFiscal    String?            @map("direccion_fiscal")
+  placa              String?            @db.VarChar(20)
+  fechaInscripcion   DateTime?          @map("fecha_inscripcion") @db.Date
+  anioFabricacion    Int?               @map("anio_fabricacion")
+  valorReferencial   Decimal?           @map("valor_referencial") @db.Decimal(14, 2)
+  baseImponible      Decimal?           @map("base_imponible") @db.Decimal(14, 2)
+  tasa               Decimal?           @db.Decimal(8, 4)
+  impuestoAnual      Decimal?           @map("impuesto_anual") @db.Decimal(14, 2)
+  impuestoTrimestral Decimal?           @map("impuesto_trimestral") @db.Decimal(14, 2)
+  observacion        String?
+  estadoConciliacion EstadoConciliacion @default(PENDIENTE) @map("estado_conciliacion")
+  importacionId      Int?               @map("importacion_id")
+  versionDatosId        Int?               @map("version_datos_id")
+  versionPagosSisgatId Int?               @map("version_pagos_sisgat_id")
+  archivoOrigen      String?            @map("archivo_origen")
+  filaOrigen         Int?               @map("fila_origen")
+  datosOriginales    Json?              @map("datos_originales")
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
+
+  contribuyente         Contribuyente?       @relation(fields: [contribuyenteId], references: [id], onDelete: SetNull)
+  importacion           Importacion?         @relation(fields: [importacionId], references: [id], onDelete: SetNull)
+  versionDatos          VersionDatos?        @relation(fields: [versionDatosId], references: [id], onDelete: SetNull)
+  versionPagosSisgat    VersionPagosSisgat? @relation(fields: [versionPagosSisgatId], references: [id], onDelete: SetNull)
+  recibos               ReciboPago[]
+  detallesConciliados    OrdenDetalle[]
+  detallesLiquidaciones  LiquidacionDetalle[]
+  detallesRequerimientos RequerimientoDetalle[]
+  periodosRequerimientosManuales RequerimientoManualPeriodo[]
+
+  @@unique([anioDeclaracion, numeroDeclaracion])
+  @@index([contribuyenteId])
+  @@index([dniRuc, placa, anioDeclaracion])
+  @@index([placa])
+  @@index([estadoConciliacion])
+  @@index([importacionId])
+  @@index([versionDatosId])
+  @@index([versionPagosSisgatId])
+  @@map("declaraciones")
+}
+
+model ReciboPago {
+  id                      Int       @id @default(autoincrement())
+  declaracionId           Int       @map("declaracion_id")
+  anioRecibo              Int       @map("anio_recibo")
+  numeroRecibo            String    @map("numero_recibo") @db.VarChar(60)
+  monto                   Decimal   @db.Decimal(14, 2)
+  trimestreOriginal       String?   @map("trimestre_original") @db.VarChar(30)
+  trimestreDesde          Int?      @map("trimestre_desde")
+  trimestreHasta          Int?      @map("trimestre_hasta")
+  estadoOriginal          String?   @map("estado_original") @db.VarChar(40)
+  activo                  Boolean   @default(false)
+  usuarioCreacion         String?   @map("usuario_creacion") @db.VarChar(100)
+  fechaCreacionOrigen     DateTime? @map("fecha_creacion_origen")
+  usuarioModificacion     String?   @map("usuario_modificacion") @db.VarChar(100)
+  fechaModificacionOrigen DateTime? @map("fecha_modificacion_origen")
+  createdAt               DateTime  @default(now()) @map("created_at")
+  updatedAt               DateTime  @updatedAt @map("updated_at")
+
+  declaracion Declaracion @relation(fields: [declaracionId], references: [id], onDelete: Cascade)
+
+  @@unique([anioRecibo, numeroRecibo])
+  @@index([declaracionId])
+  @@index([activo])
+  @@index([anioRecibo])
+  @@map("recibos_pago")
+}
+
+model Importacion {
+  id                Int               @id @default(autoincrement())
+  tipo              TipoImportacion
+  origen            OrigenImportacion @default(MANUAL)
+  estado            EstadoImportacion @default(PROCESANDO)
+  nombreArchivo     String            @map("nombre_archivo")
+  driveFileId       String?           @map("drive_file_id")
+  driveModifiedTime DateTime?         @map("drive_modified_time")
+  hashArchivo       String?           @map("hash_archivo") @db.VarChar(128)
+  totalFilas        Int               @default(0) @map("total_filas")
+  filasCorrectas    Int               @default(0) @map("filas_correctas")
+  filasConError     Int               @default(0) @map("filas_con_error")
+  mensaje           String?
+  fechaImportacion  DateTime          @default(now()) @map("fecha_importacion")
+  fechaFinalizacion DateTime?         @map("fecha_finalizacion")
+
+  modo            ModoImportacion @default(HISTORICA)
+  fechaDesde      DateTime?       @map("fecha_desde") @db.Date
+  fechaHasta      DateTime?       @map("fecha_hasta") @db.Date
+  tipoFechaFiltro TipoFechaFiltro @default(NO_ESPECIFICADO) @map("tipo_fecha_filtro")
+
+  registrosNuevos       Int @default(0) @map("registros_nuevos")
+  registrosActualizados Int @default(0) @map("registros_actualizados")
+  registrosSinCambios   Int @default(0) @map("registros_sin_cambios")
+
+  versionDatosId          Int? @map("version_datos_id")
+  versionOrdenesId         Int? @map("version_ordenes_id")
+  versionPagosSisgatId     Int? @map("version_pagos_sisgat_id")
+  versionLiquidacionesId  Int? @map("version_liquidaciones_id")
+  versionRequerimientosId         Int? @map("version_requerimientos_id")
+  versionRequerimientosManualesId Int? @map("version_requerimientos_manuales_id")
+  usuarioId                       Int? @map("usuario_id")
+
+  ordenes               OrdenPago[]
+  liquidaciones         Liquidacion[]
+  requerimientos        Requerimiento[]
+  requerimientosManuales RequerimientoManual[]
+  declaraciones         Declaracion[]
+  errores               ErrorImportacion[]
+  versionDatos          VersionDatos?          @relation(fields: [versionDatosId], references: [id], onDelete: SetNull)
+  versionOrdenes        VersionOrdenes?        @relation(fields: [versionOrdenesId], references: [id], onDelete: SetNull)
+  versionPagosSisgat    VersionPagosSisgat?    @relation(fields: [versionPagosSisgatId], references: [id], onDelete: SetNull)
+  versionLiquidaciones  VersionLiquidaciones?  @relation(fields: [versionLiquidacionesId], references: [id], onDelete: SetNull)
+  versionRequerimientos         VersionRequerimientos?         @relation(fields: [versionRequerimientosId], references: [id], onDelete: SetNull)
+  versionRequerimientosManuales VersionRequerimientosManuales? @relation(fields: [versionRequerimientosManualesId], references: [id], onDelete: SetNull)
+  usuario                       Usuario?                       @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+
+  @@index([tipo])
+  @@index([origen])
+  @@index([estado])
+  @@index([driveFileId])
+  @@index([hashArchivo])
+  @@index([versionDatosId])
+  @@index([versionOrdenesId])
+  @@index([versionPagosSisgatId])
+  @@index([versionLiquidacionesId])
+  @@index([versionRequerimientosId])
+  @@index([versionRequerimientosManualesId])
+  @@index([usuarioId])
+  @@map("importaciones")
+}
+
+model ErrorImportacion {
+  id              Int      @id @default(autoincrement())
+  importacionId   Int      @map("importacion_id")
+  fila            Int?
+  campo           String?  @db.VarChar(100)
+  valorOriginal   String?  @map("valor_original")
+  mensaje         String
+  datosOriginales Json?    @map("datos_originales")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  importacion Importacion @relation(fields: [importacionId], references: [id], onDelete: Cascade)
+
+  @@index([importacionId])
+  @@index([fila])
+  @@map("errores_importacion")
+}
+
+model VersionDatos {
+  id                 Int                @id @default(autoincrement())
+  codigo             String             @unique @default(uuid()) @db.Uuid
+  hashConjunto       String             @unique @map("hash_conjunto") @db.VarChar(64)
+  estado             EstadoVersionDatos @default(PENDIENTE)
+  usuarioId          Int?               @map("usuario_id")
+  comentario         String?            @db.VarChar(500)
+  totalOrdenes       Int                @default(0) @map("total_ordenes")
+  totalDeclaraciones Int                @default(0) @map("total_declaraciones")
+  totalRecibos       Int                @default(0) @map("total_recibos")
+  totalErrores       Int                @default(0) @map("total_errores")
+  fechaAnalisis      DateTime?          @map("fecha_analisis") @db.Timestamptz(3)
+  fechaAplicacion    DateTime?          @map("fecha_aplicacion") @db.Timestamptz(3)
+  createdAt          DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  usuario       Usuario?              @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  archivos      ArchivoVersionDatos[]
+  importaciones Importacion[]
+  ordenes       OrdenPago[]
+  declaraciones Declaracion[]
+
+  @@index([estado, createdAt])
+  @@index([usuarioId])
+  @@map("versiones_datos")
+}
+
+model ArchivoVersionDatos {
+  id               Int                @id @default(autoincrement())
+  versionDatosId   Int                @map("version_datos_id")
+  tipo             TipoArchivoVersion
+  nombreArchivo    String             @map("nombre_archivo") @db.VarChar(255)
+  hashArchivo      String             @map("hash_archivo") @db.VarChar(64)
+  contenidoGzip    Bytes              @map("contenido_gzip")
+  tamanoOriginal   Int                @map("tamano_original")
+  tamanoComprimido Int                @map("tamano_comprimido")
+  totalFilas       Int                @default(0) @map("total_filas")
+  filasValidas     Int                @default(0) @map("filas_validas")
+  filasConError    Int                @default(0) @map("filas_con_error")
+  resumen          Json?
+  createdAt        DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  versionDatos VersionDatos          @relation(fields: [versionDatosId], references: [id], onDelete: Cascade)
+  errores      ErrorArchivoVersion[]
+
+  @@unique([versionDatosId, tipo])
+  @@index([tipo, hashArchivo])
+  @@map("archivos_version_datos")
+}
+
+model ErrorArchivoVersion {
+  id              Int      @id @default(autoincrement())
+  archivoId       Int      @map("archivo_id")
+  fila            Int?
+  campo           String?  @db.VarChar(100)
+  mensaje         String
+  datosOriginales Json?    @map("datos_originales")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  archivo ArchivoVersionDatos @relation(fields: [archivoId], references: [id], onDelete: Cascade)
+
+  @@index([archivoId, fila])
+  @@map("errores_archivo_version")
+}
+
+
+model VersionOrdenes {
+  id              Int                @id @default(autoincrement())
+  codigo          String             @unique @default(uuid()) @db.Uuid
+  hashArchivo     String             @unique @map("hash_archivo") @db.VarChar(64)
+  estado          EstadoVersionDatos @default(PENDIENTE)
+  usuarioId       Int?               @map("usuario_id")
+  comentario      String?            @db.VarChar(500)
+  totalOrdenes    Int                @default(0) @map("total_ordenes")
+  totalDetalles   Int                @default(0) @map("total_detalles")
+  totalErrores    Int                @default(0) @map("total_errores")
+  fechaAnalisis   DateTime?          @map("fecha_analisis") @db.Timestamptz(3)
+  fechaAplicacion DateTime?          @map("fecha_aplicacion") @db.Timestamptz(3)
+  createdAt       DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  usuario       Usuario?               @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  archivo       ArchivoVersionOrdenes?
+  importaciones Importacion[]
+  ordenes       OrdenPago[]
+
+  @@index([estado, createdAt])
+  @@index([usuarioId])
+  @@map("versiones_ordenes")
+}
+
+model ArchivoVersionOrdenes {
+  id                Int      @id @default(autoincrement())
+  versionOrdenesId  Int      @unique @map("version_ordenes_id")
+  nombreArchivo     String   @map("nombre_archivo") @db.VarChar(255)
+  hashArchivo       String   @map("hash_archivo") @db.VarChar(64)
+  contenidoGzip     Bytes    @map("contenido_gzip")
+  tamanoOriginal    Int      @map("tamano_original")
+  tamanoComprimido  Int      @map("tamano_comprimido")
+  totalFilas        Int      @default(0) @map("total_filas")
+  filasValidas      Int      @default(0) @map("filas_validas")
+  filasConError     Int      @default(0) @map("filas_con_error")
+  resumen           Json?
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  version VersionOrdenes       @relation(fields: [versionOrdenesId], references: [id], onDelete: Cascade)
+  errores ErrorArchivoOrdenes[]
+
+  @@index([hashArchivo])
+  @@map("archivos_version_ordenes")
+}
+
+model ErrorArchivoOrdenes {
+  id              Int      @id @default(autoincrement())
+  archivoId       Int      @map("archivo_id")
+  fila            Int?
+  campo           String?  @db.VarChar(100)
+  mensaje         String
+  datosOriginales Json?    @map("datos_originales")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  archivo ArchivoVersionOrdenes @relation(fields: [archivoId], references: [id], onDelete: Cascade)
+
+  @@index([archivoId, fila])
+  @@map("errores_archivo_ordenes")
+}
+
+model VersionPagosSisgat {
+  id                 Int                @id @default(autoincrement())
+  codigo             String             @unique @default(uuid()) @db.Uuid
+  hashArchivo        String             @unique @map("hash_archivo") @db.VarChar(64)
+  estado             EstadoVersionDatos @default(PENDIENTE)
+  usuarioId          Int?               @map("usuario_id")
+  comentario         String?            @db.VarChar(500)
+  totalDeclaraciones Int                @default(0) @map("total_declaraciones")
+  totalRecibos       Int                @default(0) @map("total_recibos")
+  totalErrores       Int                @default(0) @map("total_errores")
+  totalAdvertencias  Int                @default(0) @map("total_advertencias")
+  fechaAnalisis      DateTime?          @map("fecha_analisis") @db.Timestamptz(3)
+  fechaAplicacion    DateTime?          @map("fecha_aplicacion") @db.Timestamptz(3)
+  createdAt          DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  usuario       Usuario?                    @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  archivo       ArchivoVersionPagosSisgat?
+  importaciones Importacion[]
+  declaraciones Declaracion[]
+
+  @@index([estado, createdAt])
+  @@index([usuarioId])
+  @@map("versiones_pagos_sisgat")
+}
+
+model ArchivoVersionPagosSisgat {
+  id                    Int      @id @default(autoincrement())
+  versionPagosSisgatId  Int      @unique @map("version_pagos_sisgat_id")
+  nombreArchivo         String   @map("nombre_archivo") @db.VarChar(255)
+  hashArchivo           String   @map("hash_archivo") @db.VarChar(64)
+  contenidoGzip         Bytes    @map("contenido_gzip")
+  tamanoOriginal        Int      @map("tamano_original")
+  tamanoComprimido      Int      @map("tamano_comprimido")
+  totalFilas            Int      @default(0) @map("total_filas")
+  filasValidas          Int      @default(0) @map("filas_validas")
+  filasConError         Int      @default(0) @map("filas_con_error")
+  resumen               Json?
+  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  version VersionPagosSisgat       @relation(fields: [versionPagosSisgatId], references: [id], onDelete: Cascade)
+  errores ErrorArchivoPagosSisgat[]
+
+  @@index([hashArchivo])
+  @@map("archivos_version_pagos_sisgat")
+}
+
+model ErrorArchivoPagosSisgat {
+  id              Int      @id @default(autoincrement())
+  archivoId       Int      @map("archivo_id")
+  fila            Int?
+  campo           String?  @db.VarChar(100)
+  mensaje         String
+  datosOriginales Json?    @map("datos_originales")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  archivo ArchivoVersionPagosSisgat @relation(fields: [archivoId], references: [id], onDelete: Cascade)
+
+  @@index([archivoId, fila])
+  @@map("errores_archivo_pagos_sisgat")
+}
+
+model VersionLiquidaciones {
+  id                 Int                @id @default(autoincrement())
+  codigo             String             @unique @default(uuid()) @db.Uuid
+  hashArchivo        String             @unique @map("hash_archivo") @db.VarChar(64)
+  estado             EstadoVersionDatos @default(PENDIENTE)
+  usuarioId          Int?               @map("usuario_id")
+  comentario         String?            @db.VarChar(500)
+  totalLiquidaciones Int                @default(0) @map("total_liquidaciones")
+  totalDetalles      Int                @default(0) @map("total_detalles")
+  totalErrores       Int                @default(0) @map("total_errores")
+  fechaAnalisis      DateTime?          @map("fecha_analisis") @db.Timestamptz(3)
+  fechaAplicacion    DateTime?          @map("fecha_aplicacion") @db.Timestamptz(3)
+  createdAt          DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  usuario       Usuario?                     @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  archivo       ArchivoVersionLiquidaciones?
+  importaciones Importacion[]
+  liquidaciones Liquidacion[]
+
+  @@index([estado, createdAt])
+  @@index([usuarioId])
+  @@map("versiones_liquidaciones")
+}
+
+model ArchivoVersionLiquidaciones {
+  id                     Int      @id @default(autoincrement())
+  versionLiquidacionesId Int      @unique @map("version_liquidaciones_id")
+  nombreArchivo          String   @map("nombre_archivo") @db.VarChar(255)
+  hashArchivo            String   @map("hash_archivo") @db.VarChar(64)
+  contenidoGzip          Bytes    @map("contenido_gzip")
+  tamanoOriginal         Int      @map("tamano_original")
+  tamanoComprimido       Int      @map("tamano_comprimido")
+  totalFilas             Int      @default(0) @map("total_filas")
+  filasValidas           Int      @default(0) @map("filas_validas")
+  filasConError          Int      @default(0) @map("filas_con_error")
+  resumen                Json?
+  createdAt              DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  version VersionLiquidaciones      @relation(fields: [versionLiquidacionesId], references: [id], onDelete: Cascade)
+  errores ErrorArchivoLiquidacion[]
+
+  @@index([hashArchivo])
+  @@map("archivos_version_liquidaciones")
+}
+
+model ErrorArchivoLiquidacion {
+  id              Int      @id @default(autoincrement())
+  archivoId       Int      @map("archivo_id")
+  fila            Int?
+  campo           String?  @db.VarChar(100)
+  mensaje         String
+  datosOriginales Json?    @map("datos_originales")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  archivo ArchivoVersionLiquidaciones @relation(fields: [archivoId], references: [id], onDelete: Cascade)
+
+  @@index([archivoId, fila])
+  @@map("errores_archivo_liquidacion")
+}
+
+
+model VersionRequerimientos {
+  id                  Int                @id @default(autoincrement())
+  codigo              String             @unique @default(uuid()) @db.Uuid
+  hashArchivo         String             @unique @map("hash_archivo") @db.VarChar(64)
+  estado              EstadoVersionDatos @default(PENDIENTE)
+  usuarioId           Int?               @map("usuario_id")
+  comentario          String?            @db.VarChar(500)
+  totalRequerimientos Int                @default(0) @map("total_requerimientos")
+  totalDetalles       Int                @default(0) @map("total_detalles")
+  totalErrores        Int                @default(0) @map("total_errores")
+  fechaAnalisis       DateTime?          @map("fecha_analisis") @db.Timestamptz(3)
+  fechaAplicacion     DateTime?          @map("fecha_aplicacion") @db.Timestamptz(3)
+  createdAt           DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  usuario        Usuario?                      @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  archivo        ArchivoVersionRequerimientos?
+  importaciones  Importacion[]
+  requerimientos Requerimiento[]
+
+  @@index([estado, createdAt])
+  @@index([usuarioId])
+  @@map("versiones_requerimientos")
+}
+
+model ArchivoVersionRequerimientos {
+  id                      Int      @id @default(autoincrement())
+  versionRequerimientosId Int      @unique @map("version_requerimientos_id")
+  nombreArchivo           String   @map("nombre_archivo") @db.VarChar(255)
+  hashArchivo             String   @map("hash_archivo") @db.VarChar(64)
+  contenidoGzip           Bytes    @map("contenido_gzip")
+  tamanoOriginal          Int      @map("tamano_original")
+  tamanoComprimido        Int      @map("tamano_comprimido")
+  totalFilas              Int      @default(0) @map("total_filas")
+  filasValidas            Int      @default(0) @map("filas_validas")
+  filasConError           Int      @default(0) @map("filas_con_error")
+  resumen                 Json?
+  createdAt               DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  version VersionRequerimientos       @relation(fields: [versionRequerimientosId], references: [id], onDelete: Cascade)
+  errores ErrorArchivoRequerimiento[]
+
+  @@index([hashArchivo])
+  @@map("archivos_version_requerimientos")
+}
+
+model ErrorArchivoRequerimiento {
+  id              Int      @id @default(autoincrement())
+  archivoId       Int      @map("archivo_id")
+  fila            Int?
+  campo           String?  @db.VarChar(100)
+  mensaje         String
+  datosOriginales Json?    @map("datos_originales")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  archivo ArchivoVersionRequerimientos @relation(fields: [archivoId], references: [id], onDelete: Cascade)
+
+  @@index([archivoId, fila])
+  @@map("errores_archivo_requerimiento")
+}
+
+
+model VersionRequerimientosManuales {
+  id             Int                @id @default(autoincrement())
+  codigo         String             @unique @default(uuid()) @db.Uuid
+  hashArchivo    String             @unique @map("hash_archivo") @db.VarChar(64)
+  estado         EstadoVersionDatos @default(PENDIENTE)
+  usuarioId      Int?               @map("usuario_id")
+  comentario     String?            @db.VarChar(500)
+  anioGestion    Int                @map("anio_gestion")
+  totalRegistros Int                @default(0) @map("total_registros")
+  totalPeriodos  Int                @default(0) @map("total_periodos")
+  totalErrores   Int                @default(0) @map("total_errores")
+  totalAdvertencias Int             @default(0) @map("total_advertencias")
+  fechaAnalisis  DateTime?          @map("fecha_analisis") @db.Timestamptz(3)
+  fechaAplicacion DateTime?         @map("fecha_aplicacion") @db.Timestamptz(3)
+  createdAt      DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  usuario                Usuario?                              @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  archivo                ArchivoVersionRequerimientosManuales?
+  importaciones          Importacion[]
+  requerimientosManuales RequerimientoManual[]
+
+  @@index([estado, createdAt])
+  @@index([anioGestion])
+  @@index([usuarioId])
+  @@map("versiones_requerimientos_manuales")
+}
+
+model ArchivoVersionRequerimientosManuales {
+  id                              Int      @id @default(autoincrement())
+  versionRequerimientosManualesId Int      @unique @map("version_requerimientos_manuales_id")
+  nombreArchivo                   String   @map("nombre_archivo") @db.VarChar(255)
+  nombreHoja                      String?  @map("nombre_hoja") @db.VarChar(150)
+  hashArchivo                     String   @map("hash_archivo") @db.VarChar(64)
+  contenidoOriginal               Bytes    @map("contenido_original")
+  tamanoOriginal                  Int      @map("tamano_original")
+  totalFilas                      Int      @default(0) @map("total_filas")
+  filasValidas                    Int      @default(0) @map("filas_validas")
+  filasConError                   Int      @default(0) @map("filas_con_error")
+  resumen                         Json?
+  createdAt                       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  version VersionRequerimientosManuales      @relation(fields: [versionRequerimientosManualesId], references: [id], onDelete: Cascade)
+  errores ErrorArchivoRequerimientoManual[]
+
+  @@index([hashArchivo])
+  @@map("archivos_version_requerimientos_manuales")
+}
+
+model ErrorArchivoRequerimientoManual {
+  id              Int      @id @default(autoincrement())
+  archivoId       Int      @map("archivo_id")
+  fila            Int?
+  campo           String?  @db.VarChar(120)
+  nivel           String   @default("ERROR") @db.VarChar(20)
+  mensaje         String
+  datosOriginales Json?    @map("datos_originales")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  archivo ArchivoVersionRequerimientosManuales @relation(fields: [archivoId], references: [id], onDelete: Cascade)
+
+  @@index([archivoId, fila])
+  @@index([nivel])
+  @@map("errores_archivo_requerimiento_manual")
+}
+
+enum RolUsuario {
+  USUARIO
+  ADMINISTRADOR
+}
+
+enum EstadoUsuario {
+  ACTIVO
+  BLOQUEADO
+  DESACTIVADO
+}
+
+enum TipoSesion {
+  INVITADO
+  AUTENTICADO
+}
+
+enum EstadoSesion {
+  ACTIVA
+  REVOCADA
+  EXPIRADA
+}
+
+model Usuario {
+  id               Int           @id @default(autoincrement())
+  nombre           String        @db.VarChar(150)
+  nombreUsuario    String        @unique @map("nombre_usuario") @db.VarChar(80)
+  correo           String?       @unique @db.VarChar(180)
+  passwordHash     String        @map("password_hash") @db.VarChar(255)
+  rol              RolUsuario    @default(USUARIO)
+  estado           EstadoUsuario @default(ACTIVO)
+  intentosFallidos Int           @default(0) @map("intentos_fallidos")
+  bloqueadoHasta   DateTime?     @map("bloqueado_hasta") @db.Timestamptz(3)
+  ultimoAcceso     DateTime?     @map("ultimo_acceso") @db.Timestamptz(3)
+  createdAt        DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  sesiones               Sesion[]
+  auditorias             Auditoria[]
+  importaciones          Importacion[]
+  versionesDatos          VersionDatos[]
+  versionesOrdenes        VersionOrdenes[]
+  versionesPagosSisgat    VersionPagosSisgat[]
+  versionesLiquidaciones  VersionLiquidaciones[]
+  versionesRequerimientos         VersionRequerimientos[]
+  versionesRequerimientosManuales VersionRequerimientosManuales[]
+  seguimientosRequerimientosManuales SeguimientoRequerimientoManual[]
+  historialRequerimientosManuales    HistorialRequerimientoManual[]
+
+  @@index([rol, estado])
+  @@map("usuarios")
+}
+
+model Sesion {
+  id              String       @id @default(uuid()) @db.Uuid
+  tokenHash       String       @unique @map("token_hash") @db.VarChar(64)
+  tipo            TipoSesion
+  estado          EstadoSesion @default(ACTIVA)
+  usuarioId       Int?         @map("usuario_id")
+  fechaExpira     DateTime     @map("fecha_expira") @db.Timestamptz(3)
+  ultimaActividad DateTime     @default(now()) @map("ultima_actividad") @db.Timestamptz(3)
+  ip              String?      @db.VarChar(64)
+  userAgent       String?      @map("user_agent") @db.VarChar(500)
+  revokedAt       DateTime?    @map("revoked_at") @db.Timestamptz(3)
+  createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  usuario    Usuario?    @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  auditorias Auditoria[]
+
+  @@index([usuarioId, estado])
+  @@index([tipo, estado])
+  @@index([fechaExpira])
+  @@map("sesiones")
+}
+
+model Auditoria {
+  id        Int      @id @default(autoincrement())
+  usuarioId Int?     @map("usuario_id")
+  sesionId  String?  @map("sesion_id") @db.Uuid
+  accion    String   @db.VarChar(100)
+  entidad   String?  @db.VarChar(100)
+  entidadId String?  @map("entidad_id") @db.VarChar(100)
+  resultado String   @default("CORRECTO") @db.VarChar(30)
+  detalles  Json?
+  ip        String?  @db.VarChar(64)
+  userAgent String?  @map("user_agent") @db.VarChar(500)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  usuario Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  sesion  Sesion?  @relation(fields: [sesionId], references: [id], onDelete: SetNull)
+
+  @@index([usuarioId, createdAt])
+  @@index([sesionId])
+  @@index([accion, createdAt])
+  @@map("auditoria")
+}

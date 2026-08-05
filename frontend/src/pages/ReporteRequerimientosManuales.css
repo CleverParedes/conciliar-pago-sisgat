@@ -1,0 +1,477 @@
+.reporte-req-manual {
+  display: grid;
+  gap: 24px;
+}
+
+.reporte-req-manual-cabecera {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.reporte-req-manual-cabecera h1 {
+  margin: 4px 0 8px;
+}
+
+.reporte-req-manual-cabecera > div > p:last-child {
+  max-width: 800px;
+  margin: 0;
+  color: #64748b;
+  line-height: 1.6;
+}
+
+.reporte-req-manual-version {
+  min-width: 290px;
+  display: grid;
+  gap: 5px;
+  padding: 18px 20px;
+  border: 1px solid #cbd5e1;
+  border-radius: 18px;
+  background:
+    linear-gradient(
+      145deg,
+      #f8fafc,
+      #ffffff
+    );
+  box-shadow:
+    0 12px 30px
+    rgba(
+      15,
+      23,
+      42,
+      0.06
+    );
+}
+
+.reporte-req-manual-version span,
+.reporte-req-manual-version small {
+  color: #64748b;
+}
+
+.reporte-req-manual-version strong {
+  font-size: 1.7rem;
+  color: #334155;
+}
+
+.reporte-req-manual-version small {
+  overflow-wrap: anywhere;
+}
+
+.reporte-req-manual-alerta {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border-radius: 14px;
+}
+
+.reporte-req-manual-alerta button {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-size: 1.25rem;
+}
+
+.reporte-req-manual-alerta-error {
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.reporte-req-manual-alerta-exito {
+  border: 1px solid #bbf7d0;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.reporte-req-manual-panel,
+.reporte-req-manual-resultados,
+.reporte-req-manual-excel,
+.reporte-req-manual-cargando,
+.reporte-req-manual-distribuciones article {
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  background: #ffffff;
+  box-shadow:
+    0 12px 35px
+    rgba(
+      15,
+      23,
+      42,
+      0.05
+    );
+}
+
+.reporte-req-manual-panel {
+  padding: 22px;
+}
+
+.reporte-req-manual-panel-cabecera,
+.reporte-req-manual-resultados > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.reporte-req-manual-panel-cabecera h2,
+.reporte-req-manual-resultados h2,
+.reporte-req-manual-excel h2 {
+  margin: 0 0 6px;
+}
+
+.reporte-req-manual-panel-cabecera p,
+.reporte-req-manual-resultados header p {
+  margin: 0;
+  color: #64748b;
+}
+
+.reporte-req-manual-formulario {
+  display: grid;
+  grid-template-columns:
+    repeat(
+      4,
+      minmax(0, 1fr)
+    );
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.reporte-req-manual-busqueda {
+  grid-column: span 2;
+}
+
+.reporte-req-manual-campo {
+  display: grid;
+  gap: 7px;
+}
+
+.reporte-req-manual-campo span {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #475569;
+}
+
+.reporte-req-manual-campo input,
+.reporte-req-manual-campo select {
+  width: 100%;
+  min-height: 44px;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #0f172a;
+}
+
+.reporte-req-manual-campo input:focus,
+.reporte-req-manual-campo select:focus {
+  outline:
+    3px solid
+    rgba(
+      71,
+      85,
+      105,
+      0.12
+    );
+  border-color: #475569;
+}
+
+.reporte-req-manual-boton-aplicar,
+.reporte-req-manual-boton-descargar,
+.reporte-req-manual-boton-secundario {
+  min-height: 44px;
+  padding: 10px 17px;
+  border-radius: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.reporte-req-manual-boton-aplicar {
+  align-self: end;
+  border: 1px solid #334155;
+  background: #475569;
+  color: #ffffff;
+}
+
+.reporte-req-manual-boton-descargar {
+  border: 1px solid #047857;
+  background: #059669;
+  color: #ffffff;
+}
+
+.reporte-req-manual-boton-secundario {
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+}
+
+.reporte-req-manual-boton-aplicar:disabled,
+.reporte-req-manual-boton-descargar:disabled,
+.reporte-req-manual-boton-secundario:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.reporte-req-manual-metricas {
+  display: grid;
+  grid-template-columns:
+    repeat(
+      6,
+      minmax(0, 1fr)
+    );
+  gap: 14px;
+}
+
+.reporte-req-manual-metricas article {
+  display: grid;
+  gap: 7px;
+  min-height: 90px;
+  padding: 18px;
+  border: 1px solid #e2e8f0;
+  border-radius: 17px;
+  background: #ffffff;
+}
+
+.reporte-req-manual-metricas span {
+  color: #64748b;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.reporte-req-manual-metricas strong {
+  font-size: 1.35rem;
+  color: #0f172a;
+}
+
+.reporte-req-manual-distribuciones {
+  display: grid;
+  grid-template-columns:
+    repeat(
+      4,
+      minmax(0, 1fr)
+    );
+  gap: 14px;
+}
+
+.reporte-req-manual-distribuciones article {
+  padding: 18px;
+}
+
+.reporte-req-manual-distribuciones h3 {
+  margin: 0 0 12px;
+  color: #0f172a;
+}
+
+.reporte-req-manual-distribuciones article > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.reporte-req-manual-distribuciones span {
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.reporte-req-manual-distribuciones strong {
+  color: #0f172a;
+}
+
+.reporte-req-manual-resultados {
+  overflow: hidden;
+}
+
+.reporte-req-manual-resultados > header {
+  padding: 20px 22px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.reporte-req-manual-tabla-contenedor {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.reporte-req-manual-tabla {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.reporte-req-manual-tabla th,
+.reporte-req-manual-tabla td {
+  padding: 13px 15px;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: left;
+  white-space: nowrap;
+  vertical-align: top;
+}
+
+.reporte-req-manual-tabla th {
+  background: #f8fafc;
+  color: #475569;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.reporte-req-manual-tabla td {
+  color: #334155;
+}
+
+.reporte-req-manual-tabla td:nth-child(4),
+.reporte-req-manual-tabla td:nth-child(6) {
+  min-width: 240px;
+  white-space: normal;
+}
+
+.reporte-req-manual-tabla td small {
+  display: block;
+  margin-top: 4px;
+  color: #64748b;
+}
+
+.reporte-req-manual-etiqueta {
+  display: inline-flex;
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.reporte-req-manual-etiqueta-conciliacion {
+  background: #e0f2fe;
+  color: #075985;
+}
+
+.reporte-req-manual-etiqueta-revision {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.reporte-req-manual-etiqueta-notificacion {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+.reporte-req-manual-vacio {
+  padding: 34px 22px;
+  text-align: center;
+  color: #64748b;
+}
+
+.reporte-req-manual-vacio strong {
+  display: block;
+  margin-bottom: 6px;
+  color: #334155;
+}
+
+.reporte-req-manual-cargando {
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  min-height: 180px;
+  padding: 24px;
+  color: #64748b;
+}
+
+.reporte-req-manual-excel {
+  padding: 22px;
+}
+
+.reporte-req-manual-excel > div {
+  display: grid;
+  grid-template-columns:
+    repeat(
+      5,
+      minmax(0, 1fr)
+    );
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.reporte-req-manual-excel article {
+  padding: 17px;
+  border: 1px solid #e2e8f0;
+  border-radius: 15px;
+  background: #f8fafc;
+}
+
+.reporte-req-manual-excel article strong {
+  display: block;
+  margin-bottom: 7px;
+  color: #0f172a;
+}
+
+.reporte-req-manual-excel article p {
+  margin: 0;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+@media (max-width: 1350px) {
+  .reporte-req-manual-formulario {
+    grid-template-columns:
+      repeat(
+        3,
+        minmax(0, 1fr)
+      );
+  }
+
+  .reporte-req-manual-metricas {
+    grid-template-columns:
+      repeat(
+        3,
+        minmax(0, 1fr)
+      );
+  }
+
+  .reporte-req-manual-distribuciones {
+    grid-template-columns:
+      repeat(
+        2,
+        minmax(0, 1fr)
+      );
+  }
+
+  .reporte-req-manual-excel > div {
+    grid-template-columns:
+      repeat(
+        3,
+        minmax(0, 1fr)
+      );
+  }
+}
+
+@media (max-width: 860px) {
+  .reporte-req-manual-cabecera,
+  .reporte-req-manual-panel-cabecera,
+  .reporte-req-manual-resultados > header {
+    flex-direction: column;
+  }
+
+  .reporte-req-manual-version {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .reporte-req-manual-formulario,
+  .reporte-req-manual-metricas,
+  .reporte-req-manual-distribuciones,
+  .reporte-req-manual-excel > div {
+    grid-template-columns: 1fr;
+  }
+
+  .reporte-req-manual-busqueda {
+    grid-column: auto;
+  }
+
+  .reporte-req-manual-boton-aplicar,
+  .reporte-req-manual-boton-descargar,
+  .reporte-req-manual-boton-secundario {
+    width: 100%;
+  }
+}

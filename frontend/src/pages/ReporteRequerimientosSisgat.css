@@ -1,0 +1,431 @@
+.reporte-req-sisgat {
+  display: grid;
+  gap: 24px;
+}
+
+.reporte-req-sisgat-cabecera {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.reporte-req-sisgat-cabecera h1 {
+  margin: 4px 0 8px;
+}
+
+.reporte-req-sisgat-cabecera > div > p:last-child {
+  max-width: 760px;
+  margin: 0;
+  color: #64748b;
+  line-height: 1.6;
+}
+
+.reporte-req-sisgat-version {
+  min-width: 270px;
+  display: grid;
+  gap: 5px;
+  padding: 18px 20px;
+  border: 1px solid #fde68a;
+  border-radius: 18px;
+  background: linear-gradient(145deg, #fffbeb, #ffffff);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+}
+
+.reporte-req-sisgat-version span,
+.reporte-req-sisgat-version small {
+  color: #64748b;
+}
+
+.reporte-req-sisgat-version strong {
+  font-size: 1.7rem;
+  color: #b45309;
+}
+
+.reporte-req-sisgat-version small {
+  overflow-wrap: anywhere;
+}
+
+.reporte-req-sisgat-alerta {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border-radius: 14px;
+}
+
+.reporte-req-sisgat-alerta button {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-size: 1.25rem;
+}
+
+.reporte-req-sisgat-alerta-error {
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.reporte-req-sisgat-alerta-exito {
+  border: 1px solid #bbf7d0;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.reporte-req-sisgat-panel,
+.reporte-req-sisgat-resultados,
+.reporte-req-sisgat-excel,
+.reporte-req-sisgat-cargando {
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  background: #ffffff;
+  box-shadow: 0 12px 35px rgba(15, 23, 42, 0.05);
+}
+
+.reporte-req-sisgat-panel {
+  padding: 22px;
+}
+
+.reporte-req-sisgat-panel-cabecera,
+.reporte-req-sisgat-resultados > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.reporte-req-sisgat-panel-cabecera h2,
+.reporte-req-sisgat-resultados h2,
+.reporte-req-sisgat-excel h2 {
+  margin: 0 0 6px;
+}
+
+.reporte-req-sisgat-panel-cabecera p,
+.reporte-req-sisgat-resultados header p {
+  margin: 0;
+  color: #64748b;
+}
+
+.reporte-req-sisgat-formulario {
+  display: grid;
+  grid-template-columns: minmax(240px, 2fr) repeat(5, minmax(140px, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.reporte-req-sisgat-campo {
+  display: grid;
+  gap: 7px;
+}
+
+.reporte-req-sisgat-campo span {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #475569;
+}
+
+.reporte-req-sisgat-campo input,
+.reporte-req-sisgat-campo select {
+  width: 100%;
+  min-height: 44px;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #0f172a;
+}
+
+.reporte-req-sisgat-campo input:focus,
+.reporte-req-sisgat-campo select:focus {
+  outline: 3px solid rgba(180, 83, 9, 0.12);
+  border-color: #d97706;
+}
+
+.reporte-req-sisgat-boton-aplicar,
+.reporte-req-sisgat-boton-descargar,
+.reporte-req-sisgat-boton-secundario {
+  min-height: 44px;
+  padding: 10px 17px;
+  border-radius: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.reporte-req-sisgat-boton-aplicar {
+  align-self: end;
+  border: 1px solid #b45309;
+  background: #d97706;
+  color: #ffffff;
+}
+
+.reporte-req-sisgat-boton-descargar {
+  border: 1px solid #047857;
+  background: #059669;
+  color: #ffffff;
+}
+
+.reporte-req-sisgat-boton-secundario {
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+}
+
+.reporte-req-sisgat-boton-aplicar:disabled,
+.reporte-req-sisgat-boton-descargar:disabled,
+.reporte-req-sisgat-boton-secundario:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.reporte-req-sisgat-accesos {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.reporte-req-sisgat-accesos > span {
+  margin-right: 4px;
+  color: #64748b;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.reporte-req-sisgat-accesos button {
+  border: 1px solid #fde68a;
+  border-radius: 999px;
+  padding: 7px 11px;
+  background: #fffbeb;
+  color: #b45309;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.reporte-req-sisgat-metricas {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.reporte-req-sisgat-metricas article {
+  display: grid;
+  gap: 7px;
+  min-height: 90px;
+  padding: 18px;
+  border: 1px solid #e2e8f0;
+  border-radius: 17px;
+  background: #ffffff;
+}
+
+.reporte-req-sisgat-metricas span {
+  color: #64748b;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.reporte-req-sisgat-metricas strong {
+  font-size: 1.35rem;
+  color: #0f172a;
+}
+
+.reporte-req-sisgat-resultados {
+  overflow: hidden;
+}
+
+.reporte-req-sisgat-resultados > header {
+  padding: 20px 22px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.reporte-req-sisgat-tabla-contenedor {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.reporte-req-sisgat-tabla {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.reporte-req-sisgat-tabla th,
+.reporte-req-sisgat-tabla td {
+  padding: 13px 15px;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.reporte-req-sisgat-tabla th {
+  background: #f8fafc;
+  color: #475569;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.reporte-req-sisgat-tabla td {
+  color: #334155;
+}
+
+.reporte-req-sisgat-tabla td small {
+  display: block;
+  margin-top: 4px;
+  color: #64748b;
+}
+
+.reporte-req-sisgat-tabla-vista td:nth-child(4) {
+  min-width: 260px;
+  white-space: normal;
+}
+
+.reporte-req-sisgat-estado {
+  display: inline-flex;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #334155;
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.reporte-req-sisgat-estado-pagado {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.reporte-req-sisgat-estado-pago_parcial {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.reporte-req-sisgat-estado-pendiente {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.reporte-req-sisgat-estado-sin_declaracion,
+.reporte-req-sisgat-estado-revisar {
+  background: #ffedd5;
+  color: #9a3412;
+}
+
+.reporte-req-sisgat-estado-anulado,
+.reporte-req-sisgat-estado-pago_anulado {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.reporte-req-sisgat-estado-sobrepago {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+.reporte-req-sisgat-contador {
+  display: inline-flex;
+  padding: 7px 11px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.reporte-req-sisgat-vacio {
+  padding: 34px 22px;
+  text-align: center;
+  color: #64748b;
+}
+
+.reporte-req-sisgat-vacio strong {
+  display: block;
+  margin-bottom: 6px;
+  color: #334155;
+}
+
+.reporte-req-sisgat-cargando {
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  min-height: 180px;
+  padding: 24px;
+  color: #64748b;
+}
+
+.reporte-req-sisgat-excel {
+  padding: 22px;
+}
+
+.reporte-req-sisgat-excel > div {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.reporte-req-sisgat-excel article {
+  padding: 17px;
+  border: 1px solid #e2e8f0;
+  border-radius: 15px;
+  background: #f8fafc;
+}
+
+.reporte-req-sisgat-excel article strong {
+  display: block;
+  margin-bottom: 7px;
+  color: #0f172a;
+}
+
+.reporte-req-sisgat-excel article p {
+  margin: 0;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+@media (max-width: 1350px) {
+  .reporte-req-sisgat-formulario {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .reporte-req-sisgat-busqueda {
+    grid-column: span 2;
+  }
+
+  .reporte-req-sisgat-metricas {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 860px) {
+  .reporte-req-sisgat-cabecera,
+  .reporte-req-sisgat-panel-cabecera,
+  .reporte-req-sisgat-resultados > header {
+    flex-direction: column;
+  }
+
+  .reporte-req-sisgat-version {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .reporte-req-sisgat-formulario,
+  .reporte-req-sisgat-metricas,
+  .reporte-req-sisgat-excel > div {
+    grid-template-columns: 1fr;
+  }
+
+  .reporte-req-sisgat-busqueda {
+    grid-column: auto;
+  }
+
+  .reporte-req-sisgat-boton-aplicar,
+  .reporte-req-sisgat-boton-descargar,
+  .reporte-req-sisgat-boton-secundario {
+    width: 100%;
+  }
+}

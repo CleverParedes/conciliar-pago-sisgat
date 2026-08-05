@@ -1,0 +1,291 @@
+/* ============================================================
+   ETAPA 9A.3 — ÓRDENES INDEPENDIENTES
+   ============================================================ */
+
+.ordenes-independientes {
+  margin-bottom: 22px;
+  padding: 25px;
+  background: #ffffff;
+  border: 1px solid #dce5ef;
+  border-radius: 18px;
+  box-shadow: 0 12px 34px rgba(27, 46, 83, 0.07);
+}
+
+.ordenes-independientes-cabecera {
+  display: flex;
+  justify-content: space-between;
+  gap: 22px;
+  align-items: flex-start;
+  margin-bottom: 17px;
+}
+
+.ordenes-independientes-cabecera h2 {
+  margin: 4px 0 7px;
+  color: #17243a;
+  font-size: 1.45rem;
+}
+
+.ordenes-independientes-cabecera p {
+  max-width: 850px;
+  margin: 0;
+  color: #6d798d;
+  line-height: 1.55;
+}
+
+.ordenes-independientes-listo {
+  padding: 7px 11px;
+  color: #17613d;
+  font-size: 0.69rem;
+  font-weight: 850;
+  background: #e8f7ef;
+  border: 1px solid #bde2ce;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.ordenes-impacto {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 18px;
+  padding: 12px 14px;
+  background: #f5f8fd;
+  border: 1px solid #e0e7f0;
+  border-radius: 11px;
+}
+
+.ordenes-impacto span {
+  color: #7c8798;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.ordenes-impacto strong {
+  padding: 5px 8px;
+  color: #38516f;
+  font-size: 0.7rem;
+  background: #ffffff;
+  border: 1px solid #dce4ed;
+  border-radius: 999px;
+}
+
+.ordenes-independientes-formulario {
+  display: grid;
+  grid-template-columns: minmax(300px, 1fr) minmax(300px, 1fr);
+  gap: 15px;
+}
+
+.ordenes-selector {
+  display: grid;
+  min-height: 175px;
+  padding: 24px;
+  place-items: center;
+  align-content: center;
+  text-align: center;
+  cursor: pointer;
+  background: #f7fbf9;
+  border: 2px dashed #b9d9c8;
+  border-radius: 15px;
+  transition: 160ms ease;
+}
+
+.ordenes-selector:hover {
+  background: #eefaf4;
+  border-color: #2f8a61;
+}
+
+.ordenes-selector input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.ordenes-selector-icono {
+  display: grid;
+  width: 52px;
+  height: 52px;
+  margin-bottom: 10px;
+  place-items: center;
+  color: #17704a;
+  font-size: 1.5rem;
+  background: #e7f7ef;
+  border-radius: 14px;
+}
+
+.ordenes-selector strong {
+  max-width: 460px;
+  color: #1e2a40;
+  overflow-wrap: anywhere;
+}
+
+.ordenes-selector small {
+  margin-top: 7px;
+  color: #7b8799;
+}
+
+.ordenes-comentario {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+
+.ordenes-comentario span {
+  color: #39485f;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.ordenes-comentario textarea {
+  min-height: 175px;
+  padding: 14px;
+  resize: vertical;
+  color: #1d2a40;
+  font: inherit;
+  border: 1px solid #d8e0ea;
+  border-radius: 12px;
+  outline: none;
+}
+
+.ordenes-comentario textarea:focus {
+  border-color: #2f8a61;
+  box-shadow: 0 0 0 3px rgba(47, 138, 97, 0.12);
+}
+
+.ordenes-acciones {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  grid-column: 1 / -1;
+}
+
+.ordenes-mensaje {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 5px 12px;
+  margin-bottom: 15px;
+  padding: 13px 15px;
+  border: 1px solid;
+  border-radius: 11px;
+}
+
+.ordenes-mensaje strong { grid-row: 1 / 3; }
+.ordenes-mensaje span { color: inherit; }
+.ordenes-mensaje-error { color: #893b3b; background: #fff3f3; border-color: #ebc5c5; }
+.ordenes-mensaje-info { color: #28548e; background: #eff6ff; border-color: #c9dcf4; }
+
+.ordenes-analisis,
+.ordenes-confirmacion-resumen {
+  margin-top: 18px;
+  padding: 18px;
+  background: #f9fbfd;
+  border: 1px solid #dfe7ef;
+  border-radius: 14px;
+}
+
+.ordenes-analisis > header,
+.ordenes-confirmacion-resumen > header {
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.ordenes-analisis > header span,
+.ordenes-confirmacion-resumen > header span {
+  color: #7b8798;
+  font-size: 0.69rem;
+}
+
+.ordenes-analisis h3,
+.ordenes-confirmacion-resumen h3 {
+  margin: 3px 0 0;
+  color: #15223a;
+  font-size: 1.4rem;
+}
+
+.ordenes-estado {
+  padding: 6px 9px;
+  font-weight: 820;
+  border: 1px solid;
+  border-radius: 999px;
+}
+.ordenes-estado-valido { color: #1e6844 !important; background: #e7f7ef; border-color: #bde1cc; }
+.ordenes-estado-error { color: #8d3b3b !important; background: #fff0f0; border-color: #e8bebe; }
+
+.ordenes-analisis-metricas,
+.ordenes-confirmacion-resumen > div {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.ordenes-analisis-metricas > div,
+.ordenes-confirmacion-resumen article {
+  padding: 12px 13px;
+  background: #ffffff;
+  border: 1px solid #e1e8f0;
+  border-radius: 10px;
+}
+
+.ordenes-analisis-metricas span,
+.ordenes-confirmacion-resumen article span {
+  display: block;
+  margin-bottom: 5px;
+  color: #7b8798;
+  font-size: 0.68rem;
+}
+
+.ordenes-analisis-metricas strong,
+.ordenes-confirmacion-resumen article strong {
+  color: #17243b;
+  font-size: 1.12rem;
+}
+
+.ordenes-listado-revision {
+  max-height: 260px;
+  margin-bottom: 13px;
+  padding: 13px;
+  overflow: auto;
+  background: #fff7f7;
+  border: 1px solid #efd0d0;
+  border-radius: 10px;
+}
+.ordenes-listado-revision h4 { margin: 0 0 8px; }
+.ordenes-listado-revision p { margin: 5px 0; color: #765050; font-size: 0.75rem; }
+
+.ordenes-aceptar-ajustes {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  margin-bottom: 13px;
+  padding: 12px;
+  color: #69531e;
+  font-size: 0.78rem;
+  background: #fff7df;
+  border: 1px solid #ead79d;
+  border-radius: 10px;
+}
+
+.ordenes-confirmacion-resumen > header > strong {
+  color: #1e6844;
+  font-size: 0.76rem;
+}
+
+@media (max-width: 980px) {
+  .ordenes-independientes-formulario { grid-template-columns: 1fr; }
+  .ordenes-acciones { grid-column: auto; }
+  .ordenes-analisis-metricas,
+  .ordenes-confirmacion-resumen > div { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 620px) {
+  .ordenes-independientes { padding: 18px; }
+  .ordenes-independientes-cabecera { flex-direction: column; }
+  .ordenes-analisis-metricas,
+  .ordenes-confirmacion-resumen > div { grid-template-columns: 1fr; }
+}

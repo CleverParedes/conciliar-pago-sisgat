@@ -1,0 +1,243 @@
+.liquidaciones-estados-grid {
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+}
+
+.tabla-liquidaciones {
+  min-width: 1240px;
+}
+
+.modal-liquidacion-cabecera {
+  background:
+    linear-gradient(
+      135deg,
+      #176a70,
+      #26858b
+    );
+}
+
+.liquidacion-calculo-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 13px;
+}
+
+.liquidacion-calculo-grid > div {
+  padding: 12px;
+  background: #f7fafb;
+  border: 1px solid #e3ecee;
+  border-radius: 10px;
+}
+
+.liquidacion-calculo-grid span,
+.liquidacion-calculo-grid strong {
+  display: block;
+}
+
+.liquidacion-calculo-grid span {
+  margin-bottom: 5px;
+  color: #738087;
+  font-size: 0.74rem;
+}
+
+.liquidacion-calculo-grid strong {
+  color: #22383b;
+  font-size: 0.86rem;
+}
+
+.cargando-detalle {
+  position: fixed;
+  z-index: 1100;
+  right: 24px;
+  bottom: 24px;
+  padding: 13px 17px;
+  color: white;
+  font-weight: 750;
+  background: #315bc5;
+  border-radius: 12px;
+  box-shadow:
+    0 15px 36px
+    rgba(30, 53, 105, 0.28);
+}
+
+@media (max-width: 1050px) {
+  .liquidaciones-estados-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .liquidacion-calculo-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 620px) {
+  .liquidaciones-estados-grid,
+  .liquidacion-calculo-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Etapa 8A.2 — cobertura trimestral en liquidaciones */
+
+.resumen-pagos-sisgat strong,
+.periodo-pagos-sisgat strong,
+.tabla-pagos-sisgat strong {
+  color: #245a67;
+  font-family:
+    "Consolas",
+    "Courier New",
+    monospace;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.periodo-cobertura-grid {
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+}
+
+.periodo-cobertura-grid small {
+  display: block;
+  margin-top: 6px;
+  color: #6b7a80;
+  font-size: 0.72rem;
+  font-weight: 650;
+}
+
+.diferencia-informativa {
+  padding: 13px 14px;
+  margin-top: 13px;
+  color: #5e4a17;
+  background: #fff8df;
+  border: 1px solid #ead89e;
+  border-radius: 10px;
+}
+
+.diferencia-informativa strong {
+  display: block;
+  margin-bottom: 5px;
+  color: #765b16;
+  font-size: 0.8rem;
+}
+
+.diferencia-informativa p {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.tabla-pagos-sisgat {
+  min-width: 190px;
+  max-width: 280px;
+}
+
+.estado-tarjeta small {
+  line-height: 1.35;
+}
+
+@media (max-width: 1050px) {
+  .periodo-cobertura-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 620px) {
+  .periodo-cobertura-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* Etapa 8A.3 — historial completo de pagos SisGAT */
+
+.historial-pagos-sisgat {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1.35fr)
+    minmax(0, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.historial-pagos-sisgat > div {
+  min-height: 86px;
+  padding: 15px 16px;
+  border-radius: 12px;
+}
+
+.historial-pagos-principal {
+  color: #1f4650;
+  background:
+    linear-gradient(
+      135deg,
+      #eff8f8,
+      #e7f2f5
+    );
+  border: 1px solid #cfe1e5;
+}
+
+.pagos-fuera {
+  color: #654e16;
+  background: #fff7dd;
+  border: 1px solid #ead59a;
+}
+
+.pagos-fuera-vacio {
+  color: #52626a;
+  background: #f4f7f8;
+  border-color: #dce5e7;
+}
+
+.historial-pagos-sisgat span,
+.historial-pagos-sisgat strong,
+.historial-pagos-sisgat small {
+  display: block;
+}
+
+.historial-pagos-sisgat span {
+  margin-bottom: 7px;
+  color: #718087;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.historial-pagos-sisgat strong {
+  font-family:
+    "Consolas",
+    "Courier New",
+    monospace;
+  font-size: 0.86rem;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.historial-pagos-sisgat small {
+  margin-top: 7px;
+  font-size: 0.7rem;
+  line-height: 1.45;
+}
+
+.tabla-pagos-sisgat small {
+  display: block;
+  margin-top: 6px;
+  color: #65757d;
+  font-size: 0.69rem;
+  line-height: 1.4;
+}
+
+.tabla-pagos-sisgat
+.tabla-pagos-fuera {
+  color: #8a6418;
+}
+
+@media (max-width: 760px) {
+  .historial-pagos-sisgat {
+    grid-template-columns: 1fr;
+  }
+}

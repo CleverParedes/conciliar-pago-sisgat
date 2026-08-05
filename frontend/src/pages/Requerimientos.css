@@ -1,0 +1,82 @@
+.requerimientos-estados-grid {
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+}
+
+.tabla-requerimientos {
+  min-width: 1240px;
+}
+
+.modal-requerimiento-cabecera {
+  background:
+    linear-gradient(
+      135deg,
+      #7a4a13,
+      #b06f22
+    );
+}
+
+.requerimiento-calculo-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 13px;
+}
+
+.requerimiento-calculo-grid > div {
+  padding: 12px;
+  background: #f7fafb;
+  border: 1px solid #e3ecee;
+  border-radius: 10px;
+}
+
+.requerimiento-calculo-grid span,
+.requerimiento-calculo-grid strong {
+  display: block;
+}
+
+.requerimiento-calculo-grid span {
+  margin-bottom: 5px;
+  color: #738087;
+  font-size: 0.74rem;
+}
+
+.requerimiento-calculo-grid strong {
+  color: #22383b;
+  font-size: 0.86rem;
+}
+
+.cargando-detalle {
+  position: fixed;
+  z-index: 1100;
+  right: 24px;
+  bottom: 24px;
+  padding: 13px 17px;
+  color: white;
+  font-weight: 750;
+  background: #315bc5;
+  border-radius: 12px;
+  box-shadow:
+    0 15px 36px
+    rgba(30, 53, 105, 0.28);
+}
+
+@media (max-width: 1050px) {
+  .requerimientos-estados-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .requerimiento-calculo-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 620px) {
+  .requerimientos-estados-grid,
+  .requerimiento-calculo-grid {
+    grid-template-columns: 1fr;
+  }
+}
