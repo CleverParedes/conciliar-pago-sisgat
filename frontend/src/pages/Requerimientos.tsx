@@ -1133,12 +1133,14 @@ function Requerimientos() {
                 <th>Requerimiento</th>
                 <th>Contribuyente</th>
                 <th>Placa</th>
-                <th>Pagos SisGAT</th>
                 <th>Periodos</th>
                 <th>Importe</th>
                 <th>Pagado</th>
                 <th>Saldo</th>
+                <th>Pagos SisGAT</th>
                 <th>Estado</th>
+                <th>Periodo tributario</th>
+                <th>3 años pagados</th>
                 <th>Detalle</th>
               </tr>
             </thead>
@@ -1148,7 +1150,7 @@ function Requerimientos() {
                 <tr>
                   <td
                     className="tabla-mensaje"
-                    colSpan={10}
+                    colSpan={12}
                   >
                     Cargando
                     requerimientos...
@@ -1159,7 +1161,7 @@ function Requerimientos() {
                 <tr>
                   <td
                     className="tabla-mensaje"
-                    colSpan={10}
+                    colSpan={12}
                   >
                     No se encontraron
                     requerimientos con los
@@ -1218,16 +1220,6 @@ function Requerimientos() {
                       </td>
 
                       <td>
-                        <PagosSisgatCelda
-                          pagos={
-                            requerimiento
-                              .pagosSisgat ??
-                            []
-                          }
-                        />
-                      </td>
-
-                      <td>
                         {requerimiento
                           .periodo ??
                           "—"}
@@ -1263,12 +1255,52 @@ function Requerimientos() {
                       </td>
 
                       <td>
+                        <PagosSisgatCelda
+                          pagos={
+                            requerimiento
+                              .pagosSisgat ??
+                            []
+                          }
+                        />
+                      </td>
+
+                      <td>
                         <EtiquetaEstado
                           estado={
                             requerimiento
                               .estado
                           }
                         />
+                      </td>
+
+                      <td>
+                        <div>
+                          <strong>
+                            Inscripción:{" "}
+                            {requerimiento
+                              .anioInscripcion ??
+                              "—"}
+                          </strong>
+                          <small>
+                            Último pago esperado:{" "}
+                            {requerimiento
+                              .anioUltimoTributario ??
+                              "—"}
+                          </small>
+                        </div>
+                      </td>
+
+                      <td>
+                        <strong>
+                          {requerimiento
+                            .tresAniosPagados ===
+                          null
+                            ? "—"
+                            : requerimiento
+                                .tresAniosPagados
+                              ? "SÍ"
+                              : "NO"}
+                        </strong>
                       </td>
 
                       <td>

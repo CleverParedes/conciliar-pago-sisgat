@@ -512,12 +512,14 @@ export default function ReporteRequerimientosSisgat() {
                       <th>DNI/RUC</th>
                       <th>Contribuyente</th>
                       <th>Placa</th>
-                      <th>Pagos SisGAT</th>
                       <th>Periodos</th>
                       <th>Importe</th>
                       <th>Pagado</th>
                       <th>Saldo</th>
+                      <th>Pagos SisGAT</th>
                       <th>Estado</th>
+                      <th>Periodo tributario</th>
+                      <th>3 años pagados</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -537,21 +539,40 @@ export default function ReporteRequerimientosSisgat() {
                         <td>{requerimiento.dniRuc ?? "—"}</td>
                         <td>{requerimiento.nombre ?? "—"}</td>
                         <td>{requerimiento.placa ?? "—"}</td>
+                        <td>{requerimiento.periodos}</td>
+                        <td>{moneda(requerimiento.importeTotal)}</td>
+                        <td>{moneda(requerimiento.totalPagado)}</td>
+                        <td>{moneda(requerimiento.saldo)}</td>
                         <td>
                           <PagosSisgatCelda
                             pagos={requerimiento.pagosSisgat ?? []}
                           />
                         </td>
-                        <td>{requerimiento.periodos}</td>
-                        <td>{moneda(requerimiento.importeTotal)}</td>
-                        <td>{moneda(requerimiento.totalPagado)}</td>
-                        <td>{moneda(requerimiento.saldo)}</td>
                         <td>
                           <span
                             className={`reporte-req-sisgat-estado reporte-req-sisgat-estado-${requerimiento.estado.toLowerCase()}`}
                           >
                             {etiquetaEstado(requerimiento.estado)}
                           </span>
+                        </td>
+                        <td>
+                          <strong>
+                            Inscripción:{" "}
+                            {requerimiento.anioInscripcion ?? "—"}
+                          </strong>
+                          <small>
+                            Último pago esperado:{" "}
+                            {requerimiento.anioUltimoTributario ?? "—"}
+                          </small>
+                        </td>
+                        <td>
+                          <strong>
+                            {requerimiento.tresAniosPagados === null
+                              ? "—"
+                              : requerimiento.tresAniosPagados
+                                ? "SÍ"
+                                : "NO"}
+                          </strong>
                         </td>
                       </tr>
                     ))}

@@ -901,9 +901,6 @@ export default function Reportes() {
                         Placa
                       </th>
                       <th>
-                        Pagos SisGAT
-                      </th>
-                      <th>
                         Periodos
                       </th>
                       <th>
@@ -916,7 +913,16 @@ export default function Reportes() {
                         Saldo
                       </th>
                       <th>
+                        Pagos SisGAT
+                      </th>
+                      <th>
                         Estado
+                      </th>
+                      <th>
+                        Periodo tributario
+                      </th>
+                      <th>
+                        3 años pagados
                       </th>
                     </tr>
                   </thead>
@@ -963,10 +969,6 @@ export default function Reportes() {
                           </td>
 
                           <td>
-                            <PagosSisgatCelda pagos={orden.pagosSisgat ?? []} />
-                          </td>
-
-                          <td>
                             {
                               orden.periodos
                             }
@@ -991,6 +993,10 @@ export default function Reportes() {
                           </td>
 
                           <td>
+                            <PagosSisgatCelda pagos={orden.pagosSisgat ?? []} />
+                          </td>
+
+                          <td>
                             <span
                               className={`reportes-estado reportes-estado-${orden.estado.toLowerCase()}`}
                             >
@@ -998,6 +1004,26 @@ export default function Reportes() {
                                 orden.estado,
                               )}
                             </span>
+                          </td>
+
+                          <td>
+                            <strong>
+                              Inscripción:{" "}
+                              {orden.anioInscripcion ?? "—"}
+                            </strong>
+                            <small>
+                              Último pago esperado:{" "}
+                              {orden.anioUltimoTributario ?? "—"}
+                            </small>
+                          </td>
+                          <td>
+                            <strong>
+                              {orden.tresAniosPagados === null
+                                ? "—"
+                                : orden.tresAniosPagados
+                                  ? "SÍ"
+                                  : "NO"}
+                            </strong>
                           </td>
                         </tr>
                       ),

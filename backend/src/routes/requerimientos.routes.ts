@@ -45,11 +45,14 @@ function normalizarPlacaBusqueda(
 interface PagoSisgatConsulta {
   declaracionId: number;
   anioDeclaracion: number;
+  anioInscripcion: number | null;
   id: number | null;
   anioRecibo: number | null;
   numeroRecibo: string | null;
   monto: number | null;
   trimestreOriginal: string | null;
+  trimestreDesde: number | null;
+  trimestreHasta: number | null;
   estadoOriginal: string | null;
   activo: boolean;
 }
@@ -143,6 +146,7 @@ async function obtenerPagosSisgatPorPlaca(
       select: {
         id: true,
         anioDeclaracion: true,
+        fechaInscripcion: true,
         placa: true,
         recibos: {
           orderBy: [
@@ -159,6 +163,8 @@ async function obtenerPagosSisgatPorPlaca(
             numeroRecibo: true,
             monto: true,
             trimestreOriginal: true,
+            trimestreDesde: true,
+            trimestreHasta: true,
             estadoOriginal: true,
             activo: true,
           },
@@ -196,11 +202,17 @@ async function obtenerPagosSisgatPorPlaca(
             declaracion.id,
           anioDeclaracion:
             declaracion.anioDeclaracion,
+          anioInscripcion:
+            declaracion.fechaInscripcion
+              ? declaracion.fechaInscripcion.getUTCFullYear()
+              : null,
           id: null,
           anioRecibo: null,
           numeroRecibo: null,
           monto: null,
           trimestreOriginal: null,
+          trimestreDesde: null,
+          trimestreHasta: null,
           estadoOriginal: null,
           activo: false,
         },
@@ -218,6 +230,10 @@ async function obtenerPagosSisgatPorPlaca(
             declaracion.id,
           anioDeclaracion:
             declaracion.anioDeclaracion,
+          anioInscripcion:
+            declaracion.fechaInscripcion
+              ? declaracion.fechaInscripcion.getUTCFullYear()
+              : null,
           id: recibo.id,
           anioRecibo:
             recibo.anioRecibo,
@@ -228,6 +244,10 @@ async function obtenerPagosSisgatPorPlaca(
           ),
           trimestreOriginal:
             recibo.trimestreOriginal,
+          trimestreDesde:
+            recibo.trimestreDesde,
+          trimestreHasta:
+            recibo.trimestreHasta,
           estadoOriginal:
             recibo.estadoOriginal,
           activo: recibo.activo,
@@ -302,6 +322,196 @@ function pagosSisgatDePlaca(
         []
     : [];
 }
+
+function anioInscripcionSisgatDePlaca(
+  pagosPorPlaca: Map<
+    string,
+    PagoSisgatConsulta[]
+  >,
+  placa: string | null,
+): number | null {
+  const pagos =
+    pagosSisgatDePlaca(
+      pagosPorPlaca,
+      placa,
+    );
+
+  const candidato = pagos
+    .filter(
+      (pago) =>
+        pago.anioInscripcion !==
+        null,
+    )
+    .sort(
+      (a, b) =>
+        b.anioDeclaracion -
+        a.anioDeclaracion,
+    )[0];
+
+  return (
+    candidato?.anioInscripcion ??
+    null
+  );
+}
+
+function extraerTrimestresPeriodoTributario(
+  valor: string | null,
+): number[] {
+  if (!valor) {
+    return [];
+  }
+
+  const encontrados = new Set<number>();
+  const texto = valor.trim();
+
+  for (
+    const coincidencia of texto.matchAll(
+      /([1-4])\s*[-–—]\s*([1-4])/g,
+    )
+  ) {
+    const inicio = Number(coincidencia[1]);
+    const fin = Number(coincidencia[2]);
+    const desde = Math.min(inicio, fin);
+    const hasta = Math.max(inicio, fin);
+
+    for (
+      let trimestre = desde;
+      trimestre <= hasta;
+      trimestre += 1
+    ) {
+      encontrados.add(trimestre);
+    }
+  }
+
+  for (
+    const coincidencia of texto.matchAll(
+      /(?:^|\D)([1-4])(?=\D|$)/g,
+    )
+  ) {
+    encontrados.add(Number(coincidencia[1]));
+  }
+
+  return [...encontrados].sort(
+    (a, b) => a - b,
+  );
+}
+
+function anioUltimoTributarioSisgatDePlaca(
+  pagosPorPlaca: Map<
+    string,
+    PagoSisgatConsulta[]
+  >,
+  placa: string | null,
+): number | null {
+  const anioInscripcion =
+    anioInscripcionSisgatDePlaca(
+      pagosPorPlaca,
+      placa,
+    );
+
+  return anioInscripcion === null
+    ? null
+    : anioInscripcion + 3;
+}
+
+function tresAniosPagadosSisgatDePlaca(
+  pagosPorPlaca: Map<
+    string,
+    PagoSisgatConsulta[]
+  >,
+  placa: string | null,
+): boolean | null {
+  const anioInscripcion =
+    anioInscripcionSisgatDePlaca(
+      pagosPorPlaca,
+      placa,
+    );
+
+  if (anioInscripcion === null) {
+    return null;
+  }
+
+  const aniosEsperados = [
+    anioInscripcion + 1,
+    anioInscripcion + 2,
+    anioInscripcion + 3,
+  ];
+
+  const cobertura =
+    new Map<number, Set<number>>();
+
+  for (
+    const pago of pagosSisgatDePlaca(
+      pagosPorPlaca,
+      placa,
+    )
+  ) {
+    if (
+      !pago.activo ||
+      !aniosEsperados.includes(
+        pago.anioDeclaracion,
+      )
+    ) {
+      continue;
+    }
+
+    const trimestres =
+      cobertura.get(
+        pago.anioDeclaracion,
+      ) ?? new Set<number>();
+
+    if (
+      pago.trimestreDesde !== null &&
+      pago.trimestreHasta !== null
+    ) {
+      const desde = Math.max(
+        1,
+        pago.trimestreDesde,
+      );
+      const hasta = Math.min(
+        4,
+        pago.trimestreHasta,
+      );
+
+      for (
+        let trimestre = desde;
+        trimestre <= hasta;
+        trimestre += 1
+      ) {
+        trimestres.add(trimestre);
+      }
+    } else {
+      for (
+        const trimestre of
+        extraerTrimestresPeriodoTributario(
+          pago.trimestreOriginal,
+        )
+      ) {
+        trimestres.add(trimestre);
+      }
+    }
+
+    cobertura.set(
+      pago.anioDeclaracion,
+      trimestres,
+    );
+  }
+
+  return aniosEsperados.every(
+    (anio) => {
+      const trimestres =
+        cobertura.get(anio);
+
+      return (
+        trimestres?.has(1) === true &&
+        trimestres.has(2) &&
+        trimestres.has(3) &&
+        trimestres.has(4)
+      );
+    },
+  );
+}
+
 
 router.get(
   "/resumen",
@@ -591,6 +801,21 @@ router.get(
                   requerimiento.placa,
                 pagosSisgat:
                   pagosSisgatDePlaca(
+                    pagosSisgatPorPlaca,
+                    requerimiento.placa,
+                  ),
+                anioInscripcion:
+                  anioInscripcionSisgatDePlaca(
+                    pagosSisgatPorPlaca,
+                    requerimiento.placa,
+                  ),
+                anioUltimoTributario:
+                  anioUltimoTributarioSisgatDePlaca(
+                    pagosSisgatPorPlaca,
+                    requerimiento.placa,
+                  ),
+                tresAniosPagados:
+                  tresAniosPagadosSisgatDePlaca(
                     pagosSisgatPorPlaca,
                     requerimiento.placa,
                   ),

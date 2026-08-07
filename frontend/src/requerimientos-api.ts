@@ -62,6 +62,9 @@ export interface RequerimientoResumen {
   nombre: string | null;
   placa: string | null;
   pagosSisgat: PagoSisgatRequerimiento[];
+  anioInscripcion: number | null;
+  anioUltimoTributario: number | null;
+  tresAniosPagados: boolean | null;
   periodo: string | null;
   importeTotal: number;
   totalPagado: number;

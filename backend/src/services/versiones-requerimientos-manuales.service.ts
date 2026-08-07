@@ -126,7 +126,7 @@ export async function probarArchivoRequerimientosManuales(
       filasValidas: resultado.filasValidas,
       filasConError: resultado.filasConError,
       errores: resultado.errores.slice(0, 20),
-      advertencias: resultado.advertencias.slice(0, 30),
+      advertencias: resultado.advertencias,
     },
   };
 }
@@ -467,9 +467,7 @@ export async function analizarVersionRequerimientosManuales(
           20,
         ),
       advertencias:
-        resultado
-          .advertencias
-          .slice(0, 30),
+        resultado.advertencias,
     },
   };
 }

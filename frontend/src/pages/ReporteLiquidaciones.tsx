@@ -512,7 +512,10 @@ export default function ReporteLiquidaciones() {
                       <th>Importe</th>
                       <th>Pagado</th>
                       <th>Saldo</th>
+                      <th>Pagos SisGAT</th>
                       <th>Estado</th>
+                      <th>Periodo tributario</th>
+                      <th>3 años pagados</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -537,11 +540,33 @@ export default function ReporteLiquidaciones() {
                         <td>{moneda(liquidacion.totalPagado)}</td>
                         <td>{moneda(liquidacion.saldo)}</td>
                         <td>
+                          <strong>{liquidacion.pagosSisgat}</strong>
+                        </td>
+                        <td>
                           <span
                             className={`reporte-liquidaciones-estado reporte-liquidaciones-estado-${liquidacion.estado.toLowerCase()}`}
                           >
                             {etiquetaEstado(liquidacion.estado)}
                           </span>
+                        </td>
+                        <td>
+                          <strong>
+                            Inscripción:{" "}
+                            {liquidacion.anioInscripcion ?? "—"}
+                          </strong>
+                          <small>
+                            Último pago esperado:{" "}
+                            {liquidacion.anioUltimoTributario ?? "—"}
+                          </small>
+                        </td>
+                        <td>
+                          <strong>
+                            {liquidacion.tresAniosPagados === null
+                              ? "—"
+                              : liquidacion.tresAniosPagados
+                                ? "SÍ"
+                                : "NO"}
+                          </strong>
                         </td>
                       </tr>
                     ))}

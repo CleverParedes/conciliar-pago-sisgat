@@ -36,7 +36,11 @@ export interface MuestraReporteLiquidacion {
   importeTotal: number;
   totalPagado: number;
   saldo: number;
+  pagosSisgat: string;
   estado: EstadoReporteLiquidaciones;
+  anioInscripcion: number | null;
+  anioUltimoTributario: number | null;
+  tresAniosPagados: boolean | null;
   periodos: number;
   estadoOriginal: string | null;
 }

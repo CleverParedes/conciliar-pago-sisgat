@@ -182,10 +182,13 @@ Promise<void> {
     "Regla aplicada:",
   );
   console.log(
-    "  Cobertura completa de trimestres -> PAGADO",
+    "  Cobertura completa de los periodos de la liquidacion -> PAGADO",
   );
   console.log(
-    "  Cobertura incompleta con pagos activos -> PAGO_PARCIAL",
+    "  Tres anos tributarios consecutivos completos en SisGAT + estado base PAGO_PARCIAL -> PAGADO",
+  );
+  console.log(
+    "  Cobertura incompleta con pagos activos y sin tres anos consecutivos completos -> PAGO_PARCIAL",
   );
   console.log(
     "  La diferencia de monto es únicamente informativa.",

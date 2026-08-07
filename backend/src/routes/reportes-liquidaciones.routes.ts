@@ -263,6 +263,343 @@ function redondear(valor: number): number {
   return Math.round((valor + Number.EPSILON) * 100) / 100;
 }
 
+function normalizarPlacaReporte(
+  valor: string | null,
+): string {
+  const caracteres =
+    (valor ?? "")
+      .normalize("NFD")
+      .replace(/\p{Diacritic}/gu, "")
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, "");
+
+  if (caracteres.length !== 6) {
+    return "";
+  }
+
+  return (
+    `${caracteres.slice(0, 3)}` +
+    `-${caracteres.slice(3)}`
+  );
+}
+
+interface DeclaracionHistorialReporte {
+  anioDeclaracion: number;
+  placa: string | null;
+  fechaInscripcion: Date | null;
+  recibos: Array<{
+    trimestreDesde: number | null;
+    trimestreHasta: number | null;
+  }>;
+}
+
+function resumirTrimestresHistorial(
+  valores: Iterable<number>,
+): string {
+  const trimestres = [
+    ...new Set(
+      [...valores]
+        .filter(
+          (valor) =>
+            Number.isInteger(valor) &&
+            valor >= 1 &&
+            valor <= 4,
+        )
+        .sort((a, b) => a - b),
+    ),
+  ];
+
+  if (trimestres.length === 0) {
+    return "";
+  }
+
+  const segmentos: string[] = [];
+  let inicio = trimestres[0];
+  let anterior = trimestres[0];
+
+  for (
+    let indice = 1;
+    indice < trimestres.length;
+    indice += 1
+  ) {
+    const actual =
+      trimestres[indice];
+
+    if (
+      actual ===
+      anterior + 1
+    ) {
+      anterior = actual;
+      continue;
+    }
+
+    segmentos.push(
+      inicio === anterior
+        ? String(inicio)
+        : `${inicio}-${anterior}`,
+    );
+
+    inicio = actual;
+    anterior = actual;
+  }
+
+  segmentos.push(
+    inicio === anterior
+      ? String(inicio)
+      : `${inicio}-${anterior}`,
+  );
+
+  return segmentos.join(",");
+}
+
+function formatearHistorialPagosSisgat(
+  declaraciones:
+    DeclaracionHistorialReporte[],
+): string {
+  if (declaraciones.length === 0) {
+    return "Sin declaraciones SisGAT";
+  }
+
+  const trimestresPorAnio =
+    new Map<
+      number,
+      Set<number>
+    >();
+
+  for (
+    const declaracion
+    of declaraciones
+  ) {
+    const trimestres =
+      trimestresPorAnio.get(
+        declaracion
+          .anioDeclaracion,
+      ) ??
+      new Set<number>();
+
+    for (
+      const recibo
+      of declaracion.recibos
+    ) {
+      if (
+        recibo.trimestreDesde ===
+          null ||
+        recibo.trimestreHasta ===
+          null
+      ) {
+        continue;
+      }
+
+      const desde = Math.max(
+        1,
+        recibo.trimestreDesde,
+      );
+      const hasta = Math.min(
+        4,
+        recibo.trimestreHasta,
+      );
+
+      if (desde > hasta) {
+        continue;
+      }
+
+      for (
+        let trimestre = desde;
+        trimestre <= hasta;
+        trimestre += 1
+      ) {
+        trimestres.add(
+          trimestre,
+        );
+      }
+    }
+
+    trimestresPorAnio.set(
+      declaracion
+        .anioDeclaracion,
+      trimestres,
+    );
+  }
+
+  return [
+    ...trimestresPorAnio
+      .entries(),
+  ]
+    .sort(
+      ([anioA], [anioB]) =>
+        anioA - anioB,
+    )
+    .map(
+      ([anio, trimestres]) =>
+        trimestres.size === 0
+          ? `${anio} [NO HAY PAGOS]`
+          : `${anio} [${resumirTrimestresHistorial(
+              trimestres,
+            )}]`,
+    )
+    .join(" · ");
+}
+
+function obtenerAnioInscripcionReporte(
+  declaraciones:
+    DeclaracionHistorialReporte[],
+): number | null {
+  const anios = [
+    ...new Set(
+      declaraciones
+        .map(
+          (declaracion) =>
+            declaracion
+              .fechaInscripcion
+              ?.getUTCFullYear() ??
+            null,
+        )
+        .filter(
+          (valor):
+            valor is number =>
+              valor !== null,
+        ),
+    ),
+  ];
+
+  return anios.length === 1
+    ? anios[0]
+    : null;
+}
+
+interface PeriodoTributarioReporte {
+  anioInscripcion: number | null;
+  anioUltimoTributario: number | null;
+  tresAniosPagados: boolean | null;
+}
+
+function obtenerPeriodoTributarioReporte(
+  declaraciones:
+    DeclaracionHistorialReporte[],
+): PeriodoTributarioReporte {
+  const anioInscripcion =
+    obtenerAnioInscripcionReporte(
+      declaraciones,
+    );
+
+  if (anioInscripcion === null) {
+    return {
+      anioInscripcion: null,
+      anioUltimoTributario: null,
+      tresAniosPagados: null,
+    };
+  }
+
+  const cobertura =
+    new Map<number, Set<number>>();
+
+  for (
+    const declaracion
+    of declaraciones
+  ) {
+    const trimestres =
+      cobertura.get(
+        declaracion.anioDeclaracion,
+      ) ?? new Set<number>();
+
+    for (
+      const recibo
+      of declaracion.recibos
+    ) {
+      if (
+        recibo.trimestreDesde === null ||
+        recibo.trimestreHasta === null
+      ) {
+        continue;
+      }
+
+      const desde = Math.max(
+        1,
+        recibo.trimestreDesde,
+      );
+      const hasta = Math.min(
+        4,
+        recibo.trimestreHasta,
+      );
+
+      if (desde > hasta) {
+        continue;
+      }
+
+      for (
+        let trimestre = desde;
+        trimestre <= hasta;
+        trimestre += 1
+      ) {
+        trimestres.add(
+          trimestre,
+        );
+      }
+    }
+
+    cobertura.set(
+      declaracion.anioDeclaracion,
+      trimestres,
+    );
+  }
+
+  const aniosEsperados = [
+    anioInscripcion + 1,
+    anioInscripcion + 2,
+    anioInscripcion + 3,
+  ];
+
+  const tresAniosPagados =
+    aniosEsperados.every(
+      (anio) => {
+        const trimestres =
+          cobertura.get(anio);
+
+        return (
+          trimestres?.has(1) === true &&
+          trimestres.has(2) &&
+          trimestres.has(3) &&
+          trimestres.has(4)
+        );
+      },
+    );
+
+  return {
+    anioInscripcion,
+    anioUltimoTributario:
+      anioInscripcion + 3,
+    tresAniosPagados,
+  };
+}
+
+function textoPeriodoTributarioExcel(
+  anioInscripcion: number | null,
+  anioUltimoTributario: number | null,
+): string {
+  if (
+    anioInscripcion === null ||
+    anioUltimoTributario === null
+  ) {
+    return "Sin inscripción SisGAT";
+  }
+
+  return (
+    `Inscripción: ${anioInscripcion}\n` +
+    `Último pago esperado: ${anioUltimoTributario}`
+  );
+}
+
+function textoTresAniosPagados(
+  valor: boolean | null,
+): string {
+  return valor === null
+    ? "—"
+    : valor
+      ? "SÍ"
+      : "NO";
+}
+
 async function consultarReporte(filtros: FiltrosReporteLiquidaciones) {
   const version = await obtenerVersionActiva();
   const where = construirWhere(version.id, filtros);
@@ -319,6 +656,156 @@ async function consultarReporte(filtros: FiltrosReporteLiquidaciones) {
     },
   });
 
+  const placasHistorial = [
+    ...new Set(
+      liquidaciones
+        .map(
+          (liquidacion) =>
+            normalizarPlacaReporte(
+              liquidacion.placa,
+            ),
+        )
+        .filter(Boolean),
+    ),
+  ];
+
+  const declaracionesHistorial:
+    DeclaracionHistorialReporte[] =
+    placasHistorial.length === 0
+      ? []
+      : await prisma
+          .declaracion
+          .findMany({
+            where: {
+              placa: {
+                in:
+                  placasHistorial,
+              },
+            },
+            select: {
+              anioDeclaracion: true,
+              placa: true,
+              fechaInscripcion: true,
+              recibos: {
+                where: {
+                  activo: true,
+                },
+                select: {
+                  trimestreDesde:
+                    true,
+                  trimestreHasta:
+                    true,
+                },
+              },
+            },
+            orderBy: [
+              {
+                placa: "asc",
+              },
+              {
+                anioDeclaracion:
+                  "asc",
+              },
+            ],
+          });
+
+  const historialPorPlaca =
+    new Map<
+      string,
+      DeclaracionHistorialReporte[]
+    >();
+
+  for (
+    const declaracion
+    of declaracionesHistorial
+  ) {
+    const placa =
+      normalizarPlacaReporte(
+        declaracion.placa,
+      );
+
+    if (!placa) {
+      continue;
+    }
+
+    const grupo =
+      historialPorPlaca.get(
+        placa,
+      ) ?? [];
+
+    grupo.push(
+      declaracion,
+    );
+
+    historialPorPlaca.set(
+      placa,
+      grupo,
+    );
+  }
+
+  const anioInscripcionPorPlaca =
+    new Map<
+      string,
+      number | null
+    >();
+
+  const historialPagosPorPlaca =
+    new Map<
+      string,
+      string
+    >();
+
+  const anioUltimoTributarioPorPlaca =
+    new Map<
+      string,
+      number | null
+    >();
+
+  const tresAniosPagadosPorPlaca =
+    new Map<
+      string,
+      boolean | null
+    >();
+
+  for (
+    const [
+      placa,
+      declaraciones,
+    ]
+    of historialPorPlaca
+      .entries()
+  ) {
+    const periodoTributario =
+      obtenerPeriodoTributarioReporte(
+        declaraciones,
+      );
+
+    anioInscripcionPorPlaca.set(
+      placa,
+      periodoTributario
+        .anioInscripcion,
+    );
+
+    anioUltimoTributarioPorPlaca.set(
+      placa,
+      periodoTributario
+        .anioUltimoTributario,
+    );
+
+    tresAniosPagadosPorPlaca.set(
+      placa,
+      periodoTributario
+        .tresAniosPagados,
+    );
+
+    historialPagosPorPlaca.set(
+      placa,
+      formatearHistorialPagosSisgat(
+        declaraciones,
+      ),
+    );
+  }
+
   const estados = new Map<
     EstadoConciliacion,
     {
@@ -374,6 +861,10 @@ async function consultarReporte(filtros: FiltrosReporteLiquidaciones) {
     version,
     filtros,
     liquidaciones,
+    anioInscripcionPorPlaca,
+    anioUltimoTributarioPorPlaca,
+    tresAniosPagadosPorPlaca,
+    historialPagosPorPlaca,
     totales: {
       liquidaciones: liquidaciones.length,
       periodos,
@@ -582,7 +1073,18 @@ async function construirExcel(
     { header: "Importe total", key: "importe", width: 16 },
     { header: "Total pagado", key: "pagado", width: 16 },
     { header: "Saldo", key: "saldo", width: 16 },
+    { header: "Pagos SisGAT", key: "pagosSisgat", width: 48 },
     { header: "Estado", key: "estado", width: 20 },
+    {
+      header: "Periodo tributario",
+      key: "periodoTributario",
+      width: 28,
+    },
+    {
+      header: "3 años pagados",
+      key: "tresAniosPagados",
+      width: 16,
+    },
     { header: "Periodos", key: "periodos", width: 11 },
     { header: "Estado original", key: "estadoOriginal", width: 20 },
     { header: "Fecha SUNARP", key: "fechaSunarp", width: 16 },
@@ -615,7 +1117,41 @@ async function construirExcel(
       importe: Number(liquidacion.importeTotal),
       pagado: Number(liquidacion.totalPagado),
       saldo: Number(liquidacion.saldo),
+      pagosSisgat:
+        liquidacion.placa
+          ? resultado.historialPagosPorPlaca.get(
+              normalizarPlacaReporte(
+                liquidacion.placa,
+              ),
+            ) ??
+            "Sin declaraciones SisGAT"
+          : "Sin declaraciones SisGAT",
       estado: nombreEstado(liquidacion.estado),
+      periodoTributario:
+        liquidacion.placa
+          ? textoPeriodoTributarioExcel(
+              resultado.anioInscripcionPorPlaca.get(
+                normalizarPlacaReporte(
+                  liquidacion.placa,
+                ),
+              ) ?? null,
+              resultado.anioUltimoTributarioPorPlaca.get(
+                normalizarPlacaReporte(
+                  liquidacion.placa,
+                ),
+              ) ?? null,
+            )
+          : "Sin inscripción SisGAT",
+      tresAniosPagados:
+        liquidacion.placa
+          ? textoTresAniosPagados(
+              resultado.tresAniosPagadosPorPlaca.get(
+                normalizarPlacaReporte(
+                  liquidacion.placa,
+                ),
+              ) ?? null,
+            )
+          : "—",
       periodos: liquidacion.detalles.length,
       estadoOriginal: liquidacion.estadoOriginal ?? "",
       fechaSunarp: liquidacion.fechaSunarp,
@@ -632,7 +1168,7 @@ async function construirExcel(
   configurarMoneda(hojaLiquidaciones, [9, 10, 11], 2);
   hojaLiquidaciones.autoFilter = {
     from: "A1",
-    to: "V1",
+    to: "Y1",
   };
 
   const hojaPeriodos = libro.addWorksheet("Periodos y pagos", {
@@ -798,7 +1334,40 @@ reportesLiquidacionesRouter.get(
               importeTotal: Number(liquidacion.importeTotal),
               totalPagado: Number(liquidacion.totalPagado),
               saldo: Number(liquidacion.saldo),
+              pagosSisgat:
+                liquidacion.placa
+                  ? resultado.historialPagosPorPlaca.get(
+                      normalizarPlacaReporte(
+                        liquidacion.placa,
+                      ),
+                    ) ??
+                    "Sin declaraciones SisGAT"
+                  : "Sin declaraciones SisGAT",
               estado: liquidacion.estado,
+              anioInscripcion:
+                liquidacion.placa
+                  ? resultado.anioInscripcionPorPlaca.get(
+                      normalizarPlacaReporte(
+                        liquidacion.placa,
+                      ),
+                    ) ?? null
+                  : null,
+              anioUltimoTributario:
+                liquidacion.placa
+                  ? resultado.anioUltimoTributarioPorPlaca.get(
+                      normalizarPlacaReporte(
+                        liquidacion.placa,
+                      ),
+                    ) ?? null
+                  : null,
+              tresAniosPagados:
+                liquidacion.placa
+                  ? resultado.tresAniosPagadosPorPlaca.get(
+                      normalizarPlacaReporte(
+                        liquidacion.placa,
+                      ),
+                    ) ?? null
+                  : null,
               periodos: liquidacion.detalles.length,
               estadoOriginal: liquidacion.estadoOriginal,
             }),

@@ -59,6 +59,7 @@ interface DeclaracionHistorialPagos {
   anioDeclaracion: number;
   dniRuc: string | null;
   placa: string | null;
+  fechaInscripcion: Date | null;
   recibos: ReciboCobertura[];
 }
 
@@ -378,11 +379,176 @@ function formatearCobertura(
     .join(" · ");
 }
 
-function claveContribuyenteVehiculo(
-  dniRuc: string,
+function claveVehiculo(
   placa: string,
 ): string {
-  return `${dniRuc}\u0000${placa}`;
+  return normalizarPlacaBusqueda(
+    placa,
+  );
+}
+
+function formatearHistorialDeclaraciones(
+  declaraciones:
+    DeclaracionHistorialPagos[],
+): string {
+  if (declaraciones.length === 0) {
+    return "Sin declaraciones SisGAT";
+  }
+
+  const trimestresPorAnio =
+    new Map<
+      number,
+      Set<number>
+    >();
+
+  for (
+    const declaracion
+    of declaraciones
+  ) {
+    const trimestres =
+      trimestresPorAnio.get(
+        declaracion
+          .anioDeclaracion,
+      ) ??
+      new Set<number>();
+
+    for (
+      const recibo
+      of declaracion.recibos
+    ) {
+      if (!recibo.activo) {
+        continue;
+      }
+
+      if (
+        recibo.trimestreDesde ===
+          null ||
+        recibo.trimestreHasta ===
+          null
+      ) {
+        continue;
+      }
+
+      const desde = Math.max(
+        1,
+        recibo.trimestreDesde,
+      );
+      const hasta = Math.min(
+        4,
+        recibo.trimestreHasta,
+      );
+
+      if (desde > hasta) {
+        continue;
+      }
+
+      for (
+        let trimestre = desde;
+        trimestre <= hasta;
+        trimestre += 1
+      ) {
+        trimestres.add(
+          trimestre,
+        );
+      }
+    }
+
+    trimestresPorAnio.set(
+      declaracion
+        .anioDeclaracion,
+      trimestres,
+    );
+  }
+
+  return [
+    ...trimestresPorAnio
+      .entries(),
+  ]
+    .sort(
+      ([anioA], [anioB]) =>
+        anioA - anioB,
+    )
+    .map(
+      ([anio, trimestres]) =>
+        trimestres.size === 0
+          ? `${anio} [NO HAY PAGOS]`
+          : `${anio} [${resumirTrimestres(
+              trimestres,
+            )}]`,
+    )
+    .join(" · ");
+}
+
+function obtenerAnioInscripcionSisgat(
+  declaraciones: DeclaracionHistorialPagos[],
+): number | null {
+  const anios = [
+    ...new Set(
+      declaraciones
+        .map((declaracion) =>
+          declaracion.fechaInscripcion?.getUTCFullYear() ?? null,
+        )
+        .filter((valor): valor is number => valor !== null),
+    ),
+  ];
+
+  return anios.length === 1 ? anios[0] : null;
+}
+
+interface PeriodoTributarioSisgat {
+  anioInscripcion: number | null;
+  anioUltimoTributario: number | null;
+  tresAniosPagados: boolean | null;
+}
+
+function obtenerPeriodoTributarioSisgat(
+  declaraciones: DeclaracionHistorialPagos[],
+): PeriodoTributarioSisgat {
+  const anioInscripcion =
+    obtenerAnioInscripcionSisgat(
+      declaraciones,
+    );
+
+  if (anioInscripcion === null) {
+    return {
+      anioInscripcion: null,
+      anioUltimoTributario: null,
+      tresAniosPagados: null,
+    };
+  }
+
+  const aniosEsperados = [
+    anioInscripcion + 1,
+    anioInscripcion + 2,
+    anioInscripcion + 3,
+  ];
+
+  const cobertura =
+    obtenerCoberturaHistorial(
+      declaraciones,
+    );
+
+  const tresAniosPagados =
+    aniosEsperados.every(
+      (anio) => {
+        const trimestres =
+          cobertura.get(anio);
+
+        return (
+          trimestres?.has(1) === true &&
+          trimestres.has(2) &&
+          trimestres.has(3) &&
+          trimestres.has(4)
+        );
+      },
+    );
+
+  return {
+    anioInscripcion,
+    anioUltimoTributario:
+      anioInscripcion + 3,
+    tresAniosPagados,
+  };
 }
 
 function obtenerResumenPagosLiquidacion(
@@ -415,9 +581,8 @@ function obtenerResumenPagosLiquidacion(
       ),
 
     historialPagosSisgat:
-      formatearCobertura(
-        historial,
-        "Sin pagos activos",
+      formatearHistorialDeclaraciones(
+        declaraciones,
       ),
 
     pagosFueraLiquidacion:
@@ -703,63 +868,44 @@ router.get(
           }),
         ]);
 
-      const clavesHistorial =
+      const placasHistorial =
         [
-          ...new Map(
+          ...new Set(
             liquidaciones
-              .filter(
-                (
-                  liquidacion,
-                ) =>
-                  Boolean(
-                    liquidacion
-                      .dniRucOriginal,
-                  ) &&
-                  Boolean(
-                    liquidacion.placa,
-                  ),
-              )
               .map(
                 (
                   liquidacion,
-                ) => {
-                  const dniRuc =
-                    liquidacion
-                      .dniRucOriginal!;
-                  const placa =
-                    liquidacion.placa!;
-
-                  return [
-                    claveContribuyenteVehiculo(
-                      dniRuc,
-                      placa,
-                    ),
-                    {
-                      dniRuc,
-                      placa,
-                    },
-                  ] as const;
-                },
-              ),
-          ).values(),
+                ) =>
+                  liquidacion.placa
+                    ? claveVehiculo(
+                        liquidacion
+                          .placa,
+                      )
+                    : "",
+              )
+              .filter(Boolean),
+          ),
         ];
 
       const declaracionesHistorial =
-        clavesHistorial.length ===
+        placasHistorial.length ===
         0
           ? []
           : await prisma
               .declaracion
               .findMany({
                 where: {
-                  OR:
-                    clavesHistorial,
+                  placa: {
+                    in:
+                      placasHistorial,
+                  },
                 },
                 select: {
                   anioDeclaracion:
                     true,
                   dniRuc: true,
                   placa: true,
+                  fechaInscripcion: true,
                   recibos: {
                     where: {
                       activo: true,
@@ -773,9 +919,18 @@ router.get(
                     },
                   },
                 },
+                orderBy: [
+                  {
+                    placa: "asc",
+                  },
+                  {
+                    anioDeclaracion:
+                      "asc",
+                  },
+                ],
               });
 
-      const historialPorClave =
+      const historialPorPlaca =
         new Map<
           string,
           DeclaracionHistorialPagos[]
@@ -785,21 +940,21 @@ router.get(
         const declaracion
         of declaracionesHistorial
       ) {
-        if (
-          !declaracion.dniRuc ||
-          !declaracion.placa
-        ) {
+        if (!declaracion.placa) {
           continue;
         }
 
         const clave =
-          claveContribuyenteVehiculo(
-            declaracion.dniRuc,
+          claveVehiculo(
             declaracion.placa,
           );
 
+        if (!clave) {
+          continue;
+        }
+
         const acumuladas =
-          historialPorClave.get(
+          historialPorPlaca.get(
             clave,
           ) ?? [];
 
@@ -807,7 +962,7 @@ router.get(
           declaracion,
         );
 
-        historialPorClave.set(
+        historialPorPlaca.set(
           clave,
           acumuladas,
         );
@@ -820,14 +975,10 @@ router.get(
             liquidaciones.map(
               (liquidacion) => {
                 const declaraciones =
-                  liquidacion
-                    .dniRucOriginal &&
                   liquidacion.placa
                     ? (
-                        historialPorClave.get(
-                          claveContribuyenteVehiculo(
-                            liquidacion
-                              .dniRucOriginal,
+                        historialPorPlaca.get(
+                          claveVehiculo(
                             liquidacion
                               .placa,
                           ),
@@ -889,6 +1040,18 @@ router.get(
                 pagosFueraLiquidacion:
                   resumenPagos
                     .pagosFueraLiquidacion,
+                anioInscripcion:
+                  obtenerPeriodoTributarioSisgat(
+                    declaraciones,
+                  ).anioInscripcion,
+                anioUltimoTributario:
+                  obtenerPeriodoTributarioSisgat(
+                    declaraciones,
+                  ).anioUltimoTributario,
+                tresAniosPagados:
+                  obtenerPeriodoTributarioSisgat(
+                    declaraciones,
+                  ).tresAniosPagados,
                 estado:
                   liquidacion.estado,
                 estadoOriginal:
@@ -994,23 +1157,23 @@ router.get(
       }
 
       const declaracionesHistorial =
-        liquidacion.dniRucOriginal &&
         liquidacion.placa
           ? await prisma
               .declaracion
               .findMany({
                 where: {
-                  dniRuc:
-                    liquidacion
-                      .dniRucOriginal,
                   placa:
-                    liquidacion.placa,
+                    claveVehiculo(
+                      liquidacion
+                        .placa,
+                    ),
                 },
                 select: {
                   anioDeclaracion:
                     true,
                   dniRuc: true,
                   placa: true,
+                  fechaInscripcion: true,
                   recibos: {
                     where: {
                       activo: true,
@@ -1095,6 +1258,18 @@ router.get(
           pagosFueraLiquidacion:
             resumenPagos
               .pagosFueraLiquidacion,
+          anioInscripcion:
+            obtenerPeriodoTributarioSisgat(
+              declaracionesHistorial,
+            ).anioInscripcion,
+          anioUltimoTributario:
+            obtenerPeriodoTributarioSisgat(
+              declaracionesHistorial,
+            ).anioUltimoTributario,
+          tresAniosPagados:
+            obtenerPeriodoTributarioSisgat(
+              declaracionesHistorial,
+            ).tresAniosPagados,
           estado:
             liquidacion.estado,
           anioRVeh:

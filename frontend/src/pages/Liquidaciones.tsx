@@ -408,6 +408,13 @@ function ModalDetalleLiquidacion({
               </div>
 
               <div>
+                <span>Inscripción SisGAT</span>
+                <strong>
+                  {liquidacion.anioInscripcion ?? "No registrada"}
+                </strong>
+              </div>
+
+              <div>
                 <span>
                   Referencia vehicular
                 </span>
@@ -1285,6 +1292,8 @@ function Liquidaciones() {
                 <th>Pagado</th>
                 <th>Historial pagos SisGAT</th>
                 <th>Estado</th>
+                <th>Periodo tributario</th>
+                <th>3 años pagados</th>
                 <th>Detalle</th>
               </tr>
             </thead>
@@ -1294,7 +1303,7 @@ function Liquidaciones() {
                 <tr>
                   <td
                     className="tabla-mensaje"
-                    colSpan={9}
+                    colSpan={11}
                   >
                     Cargando
                     liquidaciones...
@@ -1305,7 +1314,7 @@ function Liquidaciones() {
                 <tr>
                   <td
                     className="tabla-mensaje"
-                    colSpan={9}
+                    colSpan={11}
                   >
                     No se encontraron
                     liquidaciones con los
@@ -1427,6 +1436,36 @@ function Liquidaciones() {
                               .estado
                           }
                         />
+                      </td>
+
+                      <td>
+                        <div>
+                          <strong>
+                            Inscripción:{" "}
+                            {liquidacion
+                              .anioInscripcion ??
+                              "—"}
+                          </strong>
+                          <small>
+                            Último pago esperado:{" "}
+                            {liquidacion
+                              .anioUltimoTributario ??
+                              "—"}
+                          </small>
+                        </div>
+                      </td>
+
+                      <td>
+                        <strong>
+                          {liquidacion
+                            .tresAniosPagados ===
+                          null
+                            ? "—"
+                            : liquidacion
+                                .tresAniosPagados
+                              ? "SÍ"
+                              : "NO"}
+                        </strong>
                       </td>
 
                       <td>

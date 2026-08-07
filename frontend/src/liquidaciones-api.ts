@@ -57,6 +57,9 @@ export interface LiquidacionResumen {
   pagosAplicadosLiquidacion: string;
   historialPagosSisgat: string;
   pagosFueraLiquidacion: string;
+  anioInscripcion: number | null;
+  anioUltimoTributario: number | null;
+  tresAniosPagados: boolean | null;
   estado:
     EstadoConciliacionLiquidacion;
   estadoOriginal: string | null;
@@ -137,6 +140,9 @@ export interface LiquidacionCompleta {
   pagosAplicadosLiquidacion: string;
   historialPagosSisgat: string;
   pagosFueraLiquidacion: string;
+  anioInscripcion: number | null;
+  anioUltimoTributario: number | null;
+  tresAniosPagados: boolean | null;
   estado:
     EstadoConciliacionLiquidacion;
   anioRVeh: number | null;

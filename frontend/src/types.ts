@@ -70,6 +70,9 @@ export interface OrdenResumen {
   nombre: string;
   placa: string;
   pagosSisgat: PagoSisgatResumen[];
+  anioInscripcion: number | null;
+  anioUltimoTributario: number | null;
+  tresAniosPagados: boolean | null;
   periodo: string;
   importeTotal: number;
   totalPagado: number;

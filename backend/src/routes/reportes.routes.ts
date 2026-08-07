@@ -352,11 +352,14 @@ async function obtenerVersionActiva() {
 interface PagoSisgatReporte {
   declaracionId: number;
   anioDeclaracion: number;
+  anioInscripcion: number | null;
   id: number | null;
   anioRecibo: number | null;
   numeroRecibo: string | null;
   monto: number | null;
   trimestreOriginal: string | null;
+  trimestreDesde: number | null;
+  trimestreHasta: number | null;
   estadoOriginal: string | null;
   activo: boolean;
 }
@@ -450,6 +453,7 @@ async function obtenerPagosSisgatPorPlaca(
       select: {
         id: true,
         anioDeclaracion: true,
+        fechaInscripcion: true,
         placa: true,
         recibos: {
           orderBy: [
@@ -466,6 +470,8 @@ async function obtenerPagosSisgatPorPlaca(
             numeroRecibo: true,
             monto: true,
             trimestreOriginal: true,
+            trimestreDesde: true,
+            trimestreHasta: true,
             estadoOriginal: true,
             activo: true,
           },
@@ -503,11 +509,17 @@ async function obtenerPagosSisgatPorPlaca(
             declaracion.id,
           anioDeclaracion:
             declaracion.anioDeclaracion,
+          anioInscripcion:
+            declaracion.fechaInscripcion
+              ? declaracion.fechaInscripcion.getUTCFullYear()
+              : null,
           id: null,
           anioRecibo: null,
           numeroRecibo: null,
           monto: null,
           trimestreOriginal: null,
+          trimestreDesde: null,
+          trimestreHasta: null,
           estadoOriginal: null,
           activo: false,
         },
@@ -525,6 +537,10 @@ async function obtenerPagosSisgatPorPlaca(
             declaracion.id,
           anioDeclaracion:
             declaracion.anioDeclaracion,
+          anioInscripcion:
+            declaracion.fechaInscripcion
+              ? declaracion.fechaInscripcion.getUTCFullYear()
+              : null,
           id: recibo.id,
           anioRecibo:
             recibo.anioRecibo,
@@ -535,6 +551,10 @@ async function obtenerPagosSisgatPorPlaca(
           ),
           trimestreOriginal:
             recibo.trimestreOriginal,
+          trimestreDesde:
+            recibo.trimestreDesde,
+          trimestreHasta:
+            recibo.trimestreHasta,
           estadoOriginal:
             recibo.estadoOriginal,
           activo: recibo.activo,
@@ -608,6 +628,37 @@ function pagosSisgatDePlaca(
     ? pagosPorPlaca.get(clave) ??
         []
     : [];
+}
+
+function anioInscripcionSisgatDePlaca(
+  pagosPorPlaca: Map<
+    string,
+    PagoSisgatReporte[]
+  >,
+  placa: string | null,
+): number | null {
+  const pagos =
+    pagosSisgatDePlaca(
+      pagosPorPlaca,
+      placa,
+    );
+
+  const candidato = pagos
+    .filter(
+      (pago) =>
+        pago.anioInscripcion !==
+        null,
+    )
+    .sort(
+      (a, b) =>
+        b.anioDeclaracion -
+        a.anioDeclaracion,
+    )[0];
+
+  return (
+    candidato?.anioInscripcion ??
+    null
+  );
 }
 
 function extraerTrimestresPagosSisgat(
@@ -795,6 +846,150 @@ function textoPagosSisgatExcel(
     )
     .join(" · ");
 }
+
+function anioUltimoTributarioSisgatDePlaca(
+  pagosPorPlaca: Map<
+    string,
+    PagoSisgatReporte[]
+  >,
+  placa: string | null,
+): number | null {
+  const anioInscripcion =
+    anioInscripcionSisgatDePlaca(
+      pagosPorPlaca,
+      placa,
+    );
+
+  return anioInscripcion === null
+    ? null
+    : anioInscripcion + 3;
+}
+
+function tresAniosPagadosSisgatDePlaca(
+  pagosPorPlaca: Map<
+    string,
+    PagoSisgatReporte[]
+  >,
+  placa: string | null,
+): boolean | null {
+  const anioInscripcion =
+    anioInscripcionSisgatDePlaca(
+      pagosPorPlaca,
+      placa,
+    );
+
+  if (anioInscripcion === null) {
+    return null;
+  }
+
+  const aniosEsperados = [
+    anioInscripcion + 1,
+    anioInscripcion + 2,
+    anioInscripcion + 3,
+  ];
+
+  const cobertura =
+    new Map<number, Set<number>>();
+
+  for (
+    const pago of pagosSisgatDePlaca(
+      pagosPorPlaca,
+      placa,
+    )
+  ) {
+    if (
+      !pago.activo ||
+      !aniosEsperados.includes(
+        pago.anioDeclaracion,
+      )
+    ) {
+      continue;
+    }
+
+    const trimestres =
+      cobertura.get(
+        pago.anioDeclaracion,
+      ) ?? new Set<number>();
+
+    if (
+      pago.trimestreDesde !== null &&
+      pago.trimestreHasta !== null
+    ) {
+      const desde = Math.max(
+        1,
+        pago.trimestreDesde,
+      );
+      const hasta = Math.min(
+        4,
+        pago.trimestreHasta,
+      );
+
+      for (
+        let trimestre = desde;
+        trimestre <= hasta;
+        trimestre += 1
+      ) {
+        trimestres.add(trimestre);
+      }
+    } else {
+      for (
+        const trimestre of
+        extraerTrimestresPagosSisgat(
+          pago.trimestreOriginal,
+        )
+      ) {
+        trimestres.add(trimestre);
+      }
+    }
+
+    cobertura.set(
+      pago.anioDeclaracion,
+      trimestres,
+    );
+  }
+
+  return aniosEsperados.every(
+    (anio) => {
+      const trimestres =
+        cobertura.get(anio);
+
+      return (
+        trimestres?.has(1) === true &&
+        trimestres.has(2) &&
+        trimestres.has(3) &&
+        trimestres.has(4)
+      );
+    },
+  );
+}
+
+function textoPeriodoTributarioExcel(
+  anioInscripcion: number | null,
+  anioUltimoTributario: number | null,
+): string {
+  if (
+    anioInscripcion === null ||
+    anioUltimoTributario === null
+  ) {
+    return "Sin inscripción SisGAT";
+  }
+
+  return (
+    `Inscripción: ${anioInscripcion}\n` +
+    `Último pago esperado: ${anioUltimoTributario}`
+  );
+}
+
+function textoTresAniosPagados(
+  valor: boolean | null,
+): string {
+  return valor === null
+    ? "—"
+    : valor
+      ? "SÍ"
+      : "NO";
+}
+
 
 async function consultarReporte(
   filtros:
@@ -1348,11 +1543,6 @@ async function construirExcel(
       width: 14,
     },
     {
-      header: "Pagos SisGAT por placa",
-      key: "pagosSisgat",
-      width: 52,
-    },
-    {
       header: "Periodo original",
       key: "periodoOriginal",
       width: 22,
@@ -1373,9 +1563,24 @@ async function construirExcel(
       width: 16,
     },
     {
+      header: "Pagos SisGAT por placa",
+      key: "pagosSisgat",
+      width: 52,
+    },
+    {
       header: "Estado",
       key: "estado",
       width: 20,
+    },
+    {
+      header: "Periodo tributario",
+      key: "periodoTributario",
+      width: 28,
+    },
+    {
+      header: "3 años pagados",
+      key: "tresAniosPagados",
+      width: 16,
     },
     {
       header: "Periodos",
@@ -1465,6 +1670,24 @@ async function construirExcel(
         nombreEstado(
           orden.estado,
         ),
+      periodoTributario:
+        textoPeriodoTributarioExcel(
+          anioInscripcionSisgatDePlaca(
+            resultado.pagosSisgatPorPlaca,
+            orden.placa,
+          ),
+          anioUltimoTributarioSisgatDePlaca(
+            resultado.pagosSisgatPorPlaca,
+            orden.placa,
+          ),
+        ),
+      tresAniosPagados:
+        textoTresAniosPagados(
+          tresAniosPagadosSisgatDePlaca(
+            resultado.pagosSisgatPorPlaca,
+            orden.placa,
+          ),
+        ),
       periodos:
         orden.detalles.length,
       activoOriginal:
@@ -1497,7 +1720,7 @@ async function construirExcel(
 
   hojaOrdenes.autoFilter = {
     from: "A1",
-    to: "S1",
+    to: "U1",
   };
 
   const hojaPeriodos =
@@ -1818,6 +2041,21 @@ reportesRouter.get(
                   orden.placa,
                 pagosSisgat:
                   pagosSisgatDePlaca(
+                    resultado.pagosSisgatPorPlaca,
+                    orden.placa,
+                  ),
+                anioInscripcion:
+                  anioInscripcionSisgatDePlaca(
+                    resultado.pagosSisgatPorPlaca,
+                    orden.placa,
+                  ),
+                anioUltimoTributario:
+                  anioUltimoTributarioSisgatDePlaca(
+                    resultado.pagosSisgatPorPlaca,
+                    orden.placa,
+                  ),
+                tresAniosPagados:
+                  tresAniosPagadosSisgatDePlaca(
                     resultado.pagosSisgatPorPlaca,
                     orden.placa,
                   ),

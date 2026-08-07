@@ -107,6 +107,108 @@ function determinarEstadoLiquidacion(
   return EstadoConciliacion.PENDIENTE;
 }
 
+
+// REGLA_9K2_TRES_ANIOS_POR_PLACA
+function normalizarPlacaTresAnios(
+  valor: string | null,
+): string {
+  const caracteres = (valor ?? "")
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "");
+
+  if (caracteres.length !== 6) {
+    return "";
+  }
+
+  return caracteres.slice(0, 3) + "-" + caracteres.slice(3);
+}
+
+async function tieneTresAniosConsecutivosCompletos(
+  cliente: Prisma.TransactionClient | typeof prisma,
+  _dniRuc: string | null,
+  placa: string | null,
+): Promise<boolean> {
+  const placaNormalizada = normalizarPlacaTresAnios(placa);
+
+  if (!placaNormalizada) {
+    return false;
+  }
+
+  // La regla especial se evalua por VEHICULO (placa).
+  // No se exige que el DNI/RUC actual coincida, porque el vehiculo
+  // puede haber cambiado de propietario y los pagos tributarios
+  // historicos siguen perteneciendo a la misma placa.
+  const declaraciones = await cliente.declaracion.findMany({
+    where: {
+      placa: placaNormalizada,
+    },
+    select: {
+      anioDeclaracion: true,
+      recibos: {
+        where: {
+          activo: true,
+        },
+        select: {
+          trimestreDesde: true,
+          trimestreHasta: true,
+        },
+      },
+    },
+  });
+
+  const cobertura = new Map<number, Set<number>>();
+
+  for (const declaracion of declaraciones) {
+    const trimestres =
+      cobertura.get(declaracion.anioDeclaracion) ??
+      new Set<number>();
+
+    for (const recibo of declaracion.recibos) {
+      if (
+        recibo.trimestreDesde === null ||
+        recibo.trimestreHasta === null
+      ) {
+        continue;
+      }
+
+      const desde = Math.max(1, recibo.trimestreDesde);
+      const hasta = Math.min(4, recibo.trimestreHasta);
+
+      if (desde > hasta) {
+        continue;
+      }
+
+      for (let trimestre = desde; trimestre <= hasta; trimestre += 1) {
+        trimestres.add(trimestre);
+      }
+    }
+
+    cobertura.set(declaracion.anioDeclaracion, trimestres);
+  }
+
+  const aniosCompletos = [...cobertura.entries()]
+    .filter(([, trimestres]) =>
+      [1, 2, 3, 4].every((trimestre) => trimestres.has(trimestre)),
+    )
+    .map(([anio]) => anio)
+    .sort((a, b) => a - b);
+
+  for (let indice = 0; indice <= aniosCompletos.length - 3; indice += 1) {
+    const primero = aniosCompletos[indice];
+    const segundo = aniosCompletos[indice + 1];
+    const tercero = aniosCompletos[indice + 2];
+
+    if (segundo === primero + 1 && tercero === segundo + 1) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 export async function ejecutarConciliacionLiquidaciones(
   cliente: Prisma.TransactionClient | typeof prisma = prisma,
 ): Promise<ResultadoConciliacionLiquidaciones> {
@@ -451,10 +553,23 @@ export async function ejecutarConciliacionLiquidaciones(
   });
 
   for (const liquidacion of liquidaciones) {
-    const estado = determinarEstadoLiquidacion(
+    const estadoBase = determinarEstadoLiquidacion(
       liquidacion.detalles.map((detalle) => detalle.estado),
       liquidacion.estadoOriginal,
     );
+
+    let estado = estadoBase;
+
+    if (
+      estadoBase === EstadoConciliacion.PAGO_PARCIAL &&
+      (await tieneTresAniosConsecutivosCompletos(
+        cliente,
+        liquidacion.dniRucOriginal,
+        liquidacion.placa,
+      ))
+    ) {
+      estado = EstadoConciliacion.PAGADO;
+    }
 
     const estaAnulada = estado === EstadoConciliacion.ANULADO;
 
@@ -467,14 +582,17 @@ export async function ejecutarConciliacionLiquidaciones(
           ),
         );
 
-    const saldo = estaAnulada
-      ? 0
-      : redondearMoneda(
-          liquidacion.detalles.reduce(
-            (total, detalle) => total + Number(detalle.saldo),
-            0,
-          ),
-        );
+    const saldoCalculado = redondearMoneda(
+      liquidacion.detalles.reduce(
+        (total, detalle) => total + Number(detalle.saldo),
+        0,
+      ),
+    );
+
+    const saldo =
+      estaAnulada || estado === EstadoConciliacion.PAGADO
+        ? 0
+        : saldoCalculado;
 
     await cliente.liquidacion.update({
       where: {

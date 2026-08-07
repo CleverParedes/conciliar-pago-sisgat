@@ -49,6 +49,9 @@ export interface MuestraReporteOrden {
   nombre: string | null;
   placa: string | null;
   pagosSisgat: PagoSisgatReporte[];
+  anioInscripcion: number | null;
+  anioUltimoTributario: number | null;
+  tresAniosPagados: boolean | null;
   importeTotal: number;
   totalPagado: number;
   saldo: number;

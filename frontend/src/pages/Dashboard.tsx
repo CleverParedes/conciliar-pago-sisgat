@@ -1000,12 +1000,14 @@ function Dashboard() {
                 <th>Orden</th>
                 <th>Contribuyente</th>
                 <th>Placa</th>
-                <th>Pagos SisGAT</th>
                 <th>Periodo</th>
                 <th>Total</th>
                 <th>Pagado</th>
                 <th>Por Pagar</th>
+                <th>Pagos SisGAT</th>
                 <th>Estado</th>
+                <th>Periodo tributario</th>
+                <th>3 años pagados</th>
                 <th />
               </tr>
             </thead>
@@ -1014,7 +1016,7 @@ function Dashboard() {
               {cargandoOrdenes ? (
                 <tr>
                   <td
-                    colSpan={10}
+                    colSpan={12}
                     className="tabla-mensaje"
                   >
                     Cargando órdenes...
@@ -1024,7 +1026,7 @@ function Dashboard() {
                 0 ? (
                 <tr>
                   <td
-                    colSpan={10}
+                    colSpan={12}
                     className="tabla-mensaje"
                   >
                     No se encontraron
@@ -1067,15 +1069,6 @@ function Dashboard() {
                     </td>
 
                     <td>
-                      <PagosSisgatCelda
-                        pagos={
-                          orden.pagosSisgat ??
-                          []
-                        }
-                      />
-                    </td>
-
-                    <td>
                       {orden.periodo}
                     </td>
 
@@ -1098,11 +1091,46 @@ function Dashboard() {
                     </td>
 
                     <td>
+                      <PagosSisgatCelda
+                        pagos={
+                          orden.pagosSisgat ??
+                          []
+                        }
+                      />
+                    </td>
+
+                    <td>
                       <EtiquetaEstado
                         estado={
                           orden.estado
                         }
                       />
+                    </td>
+
+                    <td>
+                      <div>
+                        <strong>
+                          Inscripción:{" "}
+                          {orden.anioInscripcion ??
+                            "—"}
+                        </strong>
+                        <small>
+                          Último pago esperado:{" "}
+                          {orden.anioUltimoTributario ??
+                            "—"}
+                        </small>
+                      </div>
+                    </td>
+
+                    <td>
+                      <strong>
+                        {orden.tresAniosPagados ===
+                        null
+                          ? "—"
+                          : orden.tresAniosPagados
+                            ? "SÍ"
+                            : "NO"}
+                      </strong>
                     </td>
 
                     <td>

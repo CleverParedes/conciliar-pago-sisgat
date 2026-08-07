@@ -967,22 +967,23 @@ export function analizarAniosRequerimientoManual(
           ),
       );
 
-  const pagosActivos =
-    pagosPorAnio.filter(
-      (pago) =>
-        pago
-          .cantidadRecibosActivos >
-        0,
-    );
-
+  // REGLA_9K2_HISTORIAL_CON_SIN_PAGO
+  // Se muestran TODOS los anos declarados en SisGAT para la placa.
+  // Si existe declaracion pero no hay recibos activos, se conserva
+  // explicitamente como: ANO [NO HAY PAGO].
   const historialPagosSisgat =
-    pagosActivos
-      .map(
-        (pago) =>
-          pago.formato,
-      )
+    pagosPorAnio
+      .map((pago) => {
+        if (
+          pago.cantidadRecibosActivos === 0
+        ) {
+          return String(pago.anio) + " [NO HAY PAGOS]";
+        }
+
+        return pago.formato;
+      })
       .join(" · ") ||
-    "Sin pagos activos";
+    "Sin declaraciones SisGAT";
 
   const aniosPagadosCompletos =
     pagosPorAnio
