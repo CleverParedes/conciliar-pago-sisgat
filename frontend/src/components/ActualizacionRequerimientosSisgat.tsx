@@ -11,6 +11,7 @@ import "../requerimientos-sisgat-9a5.css";
 import {
   analizarVersionRequerimientosSisgat,
   confirmarVersionRequerimientosSisgat,
+  probarArchivoSinAplicar,
 } from "../api";
 import type {
   ResultadoAnalisisRequerimientosSisgat,
@@ -55,6 +56,7 @@ export default function ActualizacionRequerimientosSisgat({
   const [archivo, setArchivo] = useState<File | null>(null);
   const [comentario, setComentario] = useState("");
   const [analizando, setAnalizando] = useState(false);
+  const [modoPrueba, setModoPrueba] = useState(false);
   const [confirmando, setConfirmando] = useState(false);
   const [segundos, setSegundos] = useState(0);
   const [mostrarModal, setMostrarModal] = useState(false);
@@ -80,6 +82,7 @@ export default function ActualizacionRequerimientosSisgat({
 
   function seleccionarArchivo(nuevo: File | null): void {
     setArchivo(nuevo);
+    setModoPrueba(false);
     setAnalisis(null);
     setConfirmacion(null);
     setError(null);
@@ -116,6 +119,7 @@ export default function ActualizacionRequerimientosSisgat({
 
     try {
       setAnalizando(true);
+      setModoPrueba(false);
       const resultado = await analizarVersionRequerimientosSisgat(
         archivo,
         comentario,
@@ -125,6 +129,46 @@ export default function ActualizacionRequerimientosSisgat({
         resultado.puedeConfirmarse
           ? "El reporte es válido y está listo para confirmar."
           : `El análisis encontró ${resultado.totales.errores} fila(s) con error.`,
+      );
+    } catch (e) {
+      setError(mensajeError(e));
+    } finally {
+      setAnalizando(false);
+    }
+  }
+
+  async function probarArchivo(): Promise<void> {
+    setError(null);
+    setMensaje(null);
+    setConfirmacion(null);
+
+    if (!archivo) {
+      setError("Selecciona el reporte de Requerimientos SisGAT.");
+      return;
+    }
+    if (!/\.(txt|csv)$/i.test(archivo.name)) {
+      setError("El archivo debe tener extensión TXT o CSV.");
+      return;
+    }
+    if (archivo.size > 25 * 1024 * 1024) {
+      setError("El archivo supera el límite de 25 MB.");
+      return;
+    }
+
+    try {
+      setAnalizando(true);
+      setModoPrueba(true);
+      const resultado =
+        await probarArchivoSinAplicar<ResultadoAnalisisRequerimientosSisgat>(
+          "/versiones-requerimientos/probar",
+          "requerimientos",
+          archivo,
+        );
+      setAnalisis(resultado);
+      setMensaje(
+        resultado.puedeConfirmarse
+          ? "Prueba válida: el reporte cumple las reglas. No se creó ninguna versión ni se modificaron datos."
+          : `Prueba completada: se detectaron ${resultado.totales.errores} fila(s) con error. No se modificaron datos.`,
       );
     } catch (e) {
       setError(mensajeError(e));
@@ -195,7 +239,11 @@ export default function ActualizacionRequerimientosSisgat({
       {mensaje && (
         <div className="requerimientos-sisgat-mensaje requerimientos-sisgat-mensaje-info">
           <strong>
-            {confirmacion ? "Actualización completada" : "Análisis finalizado"}
+            {confirmacion
+              ? "Actualización completada"
+              : modoPrueba
+                ? "Prueba finalizada"
+                : "Análisis finalizado"}
           </strong>
           <span>{repararTextoUtf8(mensaje)}</span>
         </div>
@@ -242,11 +290,19 @@ export default function ActualizacionRequerimientosSisgat({
             Limpiar
           </button>
           <button
+            type="button"
+            className="boton-ligero"
+            disabled={!archivo || analizando || confirmando}
+            onClick={() => void probarArchivo()}
+          >
+            {analizando && modoPrueba ? "Probando…" : "Probar archivo"}
+          </button>
+          <button
             type="submit"
             className="boton-primario"
             disabled={!archivo || analizando || confirmando}
           >
-            {analizando ? "Analizando…" : "Analizar archivo"}
+            {analizando && !modoPrueba ? "Analizando…" : "Analizar archivo"}
           </button>
         </div>
       </form>
@@ -255,11 +311,15 @@ export default function ActualizacionRequerimientosSisgat({
         <section className="requerimientos-sisgat-analisis">
           <header>
             <div>
-              <span>Resultado del análisis</span>
-              <h3>{analisis.codigo}</h3>
+              <span>{modoPrueba ? "Análisis de prueba" : "Resultado del análisis"}</span>
+              <h3>{modoPrueba ? "NO GUARDADA" : analisis.codigo}</h3>
             </div>
             <span className={claseEstado(analisis.estado)}>
-              {analisis.estado}
+              {modoPrueba
+                ? analisis.puedeConfirmarse
+                  ? "PRUEBA VÁLIDA"
+                  : "PRUEBA CON ERRORES"
+                : analisis.estado}
             </span>
           </header>
 
@@ -299,14 +359,21 @@ export default function ActualizacionRequerimientosSisgat({
               <span>Archivo</span>
               <strong>{analisis.archivo.nombre}</strong>
             </div>
-            <button
-              type="button"
-              className="boton-primario"
-              disabled={!analisis.puedeConfirmarse || confirmando}
-              onClick={() => setMostrarModal(true)}
-            >
-              Confirmar versión
-            </button>
+            {modoPrueba ? (
+              <div className="requerimientos-sisgat-mensaje requerimientos-sisgat-mensaje-info">
+                <strong>Modo de prueba</strong>
+                <span>El análisis no creó una versión, no guardó el archivo y no modificó PostgreSQL.</span>
+              </div>
+            ) : (
+              <button
+                type="button"
+                className="boton-primario"
+                disabled={!analisis.puedeConfirmarse || confirmando}
+                onClick={() => setMostrarModal(true)}
+              >
+                Confirmar versión
+              </button>
+            )}
           </div>
         </section>
       )}

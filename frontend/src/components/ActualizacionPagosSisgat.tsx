@@ -10,6 +10,7 @@ import {
 import {
   analizarVersionPagosSisgat,
   confirmarVersionPagosSisgat,
+  probarArchivoSinAplicar,
 } from "../api";
 import type {
   ResultadoAnalisisPagosSisgat,
@@ -49,6 +50,8 @@ export default function ActualizacionPagosSisgat({
   const [comentario, setComentario] =
     useState("");
   const [analizando, setAnalizando] =
+    useState(false);
+  const [modoPrueba, setModoPrueba] =
     useState(false);
   const [confirmando, setConfirmando] =
     useState(false);
@@ -98,6 +101,7 @@ export default function ActualizacionPagosSisgat({
     nuevo: File | null,
   ): void {
     setArchivo(nuevo);
+    setModoPrueba(false);
     setAnalisis(null);
     setConfirmacion(null);
     setError(null);
@@ -143,6 +147,7 @@ export default function ActualizacionPagosSisgat({
 
     try {
       setAnalizando(true);
+      setModoPrueba(false);
       const resultado =
         await analizarVersionPagosSisgat(
           archivo,
@@ -165,8 +170,56 @@ export default function ActualizacionPagosSisgat({
     }
   }
 
+  async function probarArchivo(): Promise<void> {
+    setError(null);
+    setMensaje(null);
+    setConfirmacion(null);
+    setAceptaAjustes(false);
+
+    if (!archivo) {
+      setError("Selecciona el reporte de declaraciones y pagos SisGAT.");
+      return;
+    }
+
+    if (!/\.(txt|csv)$/i.test(archivo.name)) {
+      setError("El archivo debe ser TXT o CSV.");
+      return;
+    }
+
+    if (archivo.size > 25 * 1024 * 1024) {
+      setError("El archivo supera el límite de 25 MB.");
+      return;
+    }
+
+    try {
+      setAnalizando(true);
+      setModoPrueba(true);
+
+      const resultado =
+        await probarArchivoSinAplicar<ResultadoAnalisisPagosSisgat>(
+          "/versiones-pagos-sisgat/probar",
+          "archivo",
+          archivo,
+        );
+
+      setAnalisis(resultado);
+      setMensaje(
+        resultado.puedeConfirmarse
+          ? resultado.requiereRevisionAjustes
+            ? `Prueba válida: se detectaron ${resultado.totalAdvertencias} ajuste(s) automático(s). No se guardó nada.`
+            : "Prueba válida: no se detectaron errores. No se creó ninguna versión ni se modificaron datos."
+          : `Prueba completada: se detectaron ${resultado.totales.errores} fila(s) con error. No se modificaron datos.`,
+      );
+    } catch (e) {
+      setError(mensajeError(e));
+    } finally {
+      setAnalizando(false);
+    }
+  }
+
   function solicitarConfirmacion(): void {
     if (
+      modoPrueba ||
       !analisis?.puedeConfirmarse
     ) {
       return;
@@ -272,7 +325,9 @@ export default function ActualizacionPagosSisgat({
           <strong>
             {confirmacion
               ? "Actualización completada"
-              : "Análisis finalizado"}
+              : modoPrueba
+                ? "Prueba finalizada"
+                : "Análisis finalizado"}
           </strong>
           <span>{repararTextoUtf8(mensaje)}</span>
         </div>
@@ -335,6 +390,20 @@ export default function ActualizacionPagosSisgat({
             Limpiar
           </button>
           <button
+            type="button"
+            className="boton-ligero"
+            disabled={
+              analizando ||
+              confirmando ||
+              !archivo
+            }
+            onClick={() => void probarArchivo()}
+          >
+            {analizando && modoPrueba
+              ? "Probando…"
+              : "Probar archivo"}
+          </button>
+          <button
             type="submit"
             className="boton-primario"
             disabled={
@@ -343,7 +412,7 @@ export default function ActualizacionPagosSisgat({
               !archivo
             }
           >
-            {analizando
+            {analizando && !modoPrueba
               ? "Analizando…"
               : "Analizar archivo"}
           </button>
@@ -354,8 +423,8 @@ export default function ActualizacionPagosSisgat({
         <section className="pagos-analisis">
           <header>
             <div>
-              <span>Versión analizada</span>
-              <h3>#{analisis.id}</h3>
+              <span>{modoPrueba ? "Análisis de prueba" : "Versión analizada"}</span>
+              <h3>{modoPrueba ? "NO GUARDADA" : `#${analisis.id}`}</h3>
             </div>
             <span
               className={
@@ -364,9 +433,13 @@ export default function ActualizacionPagosSisgat({
                   : "pagos-estado pagos-estado-error"
               }
             >
-              {analisis.puedeConfirmarse
-                ? "Lista para confirmar"
-                : "Con errores"}
+              {modoPrueba
+                ? analisis.puedeConfirmarse
+                  ? "Prueba válida"
+                  : "Prueba con errores"
+                : analisis.puedeConfirmarse
+                  ? "Lista para confirmar"
+                  : "Con errores"}
             </span>
           </header>
 
@@ -416,7 +489,7 @@ export default function ActualizacionPagosSisgat({
             />
           )}
 
-          {analisis.requiereRevisionAjustes && (
+          {analisis.requiereRevisionAjustes && !modoPrueba && (
             <label className="pagos-aceptar-ajustes">
               <input
                 type="checkbox"
@@ -434,19 +507,26 @@ export default function ActualizacionPagosSisgat({
             </label>
           )}
 
-          <button
-            type="button"
-            className="boton-primario"
-            disabled={
-              !analisis.puedeConfirmarse ||
-              confirmando
-            }
-            onClick={
-              solicitarConfirmacion
-            }
-          >
-            Confirmar nueva versión de pagos
-          </button>
+          {modoPrueba ? (
+            <div className="pagos-mensaje pagos-mensaje-info">
+              <strong>Modo de prueba</strong>
+              <span>El análisis usó las reglas reales, pero no creó una versión, no guardó el archivo y no modificó PostgreSQL.</span>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="boton-primario"
+              disabled={
+                !analisis.puedeConfirmarse ||
+                confirmando
+              }
+              onClick={
+                solicitarConfirmacion
+              }
+            >
+              Confirmar nueva versión de pagos
+            </button>
+          )}
         </section>
       )}
 

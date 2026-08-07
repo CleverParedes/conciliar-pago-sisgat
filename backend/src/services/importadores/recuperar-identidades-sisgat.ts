@@ -2,9 +2,13 @@ import type { Prisma } from "../../../generated/prisma/client";
 
 export type CampoIdentidadRecuperado = "DNI_RUC" | "NOMBRE_RAZON_SOCIAL";
 
+export type MetodoAjusteIdentidad =
+  | "PLACA_Y_SERIE_COINCIDENCIA_UNICA"
+  | "MARCADOR_DATO_FALTANTE";
+
 export interface AdvertenciaIdentidadRecuperada {
   id: string;
-  tipo: "IDENTIDAD_RECUPERADA";
+  tipo: "IDENTIDAD_RECUPERADA" | "IDENTIDAD_MARCADOR";
   fila: number;
   anioDeclaracion: string;
   numeroDeclaracion: string;
@@ -16,9 +20,12 @@ export interface AdvertenciaIdentidadRecuperada {
   filaFuente: number;
   anioDeclaracionFuente: string;
   numeroDeclaracionFuente: string;
-  metodo: "PLACA_Y_SERIE_COINCIDENCIA_UNICA";
+  metodo: MetodoAjusteIdentidad;
   mensaje: string;
 }
+
+export const MARCADOR_DNI_RUC = "SIN DNI/RUC";
+export const MARCADOR_RAZON_SOCIAL = "SIN RZ";
 
 export function advertenciaIdentidadRecuperadaComoJson(
   advertencia: AdvertenciaIdentidadRecuperada,
@@ -95,6 +102,10 @@ function normalizarSerie(valor: string): string {
 }
 
 function enmascararDocumento(documento: string): string {
+  if (documento === MARCADOR_DNI_RUC) {
+    return MARCADOR_DNI_RUC;
+  }
+
   if (documento.length <= 4) {
     return documento;
   }
@@ -104,7 +115,6 @@ function enmascararDocumento(documento: string): string {
 
 function crearClaveVehiculo(fila: string[]): string | null {
   const placa = normalizarPlaca(fila[INDICE_PLACA] ?? "");
-
   const serie = normalizarSerie(fila[INDICE_SERIE] ?? "");
 
   if (!placa || !serie) {
@@ -118,13 +128,58 @@ function obtenerClaveIdentidad(identidad: IdentidadCandidata): string {
   return [identidad.documento, identidad.nombreNormalizado].join("|");
 }
 
+function crearAdvertenciaMarcador(
+  fila: string[],
+  indice: number,
+  camposCompletados: CampoIdentidadRecuperado[],
+): AdvertenciaIdentidadRecuperada {
+  const filaObjetivo = indice + 2;
+  const placa = normalizarPlaca(fila[INDICE_PLACA] ?? "");
+  const numeroSerie = normalizarSerie(fila[INDICE_SERIE] ?? "");
+  const documento = (fila[INDICE_DOCUMENTO] ?? "").trim();
+  const nombre = (fila[INDICE_NOMBRE] ?? "").trim();
+
+  const etiquetas = camposCompletados.map((campo) =>
+    campo === "DNI_RUC" ? MARCADOR_DNI_RUC : MARCADOR_RAZON_SOCIAL,
+  );
+
+  return {
+    id: `IDENTIDAD_MARCADOR-${filaObjetivo}`,
+    tipo: "IDENTIDAD_MARCADOR",
+    fila: filaObjetivo,
+    anioDeclaracion: fila[0] ?? "",
+    numeroDeclaracion: fila[1] ?? "",
+    placa,
+    numeroSerie,
+    camposCompletados,
+    documentoEnmascarado:
+      documento === MARCADOR_DNI_RUC
+        ? MARCADOR_DNI_RUC
+        : enmascararDocumento(normalizarDocumento(documento)),
+    nombreRecuperado: nombre || MARCADOR_RAZON_SOCIAL,
+    filaFuente: 0,
+    anioDeclaracionFuente: "",
+    numeroDeclaracionFuente: "",
+    metodo: "MARCADOR_DATO_FALTANTE",
+    mensaje:
+      `No se encontró una coincidencia única y segura para completar el dato faltante. ` +
+      `Se asignó ${etiquetas.join(" y ")} como marcador controlado para permitir la importación ` +
+      `sin ocultar que el dato no estaba disponible en la fuente. El archivo original no fue modificado.`,
+  };
+}
+
 /**
- * Completa únicamente DNI/RUC y nombre cuando:
+ * Ajusta únicamente los campos de identidad de declaraciones SisGAT.
  *
- * 1. el registro objetivo tiene uno o ambos campos vacíos;
- * 2. existe otra fila con igual placa y número de serie;
- * 3. todas las coincidencias válidas representan una sola identidad;
- * 4. cualquier dato ya presente en la fila objetivo coincide con la fuente.
+ * Orden de reglas:
+ *
+ * 1. Intenta recuperar DNI/RUC y/o nombre cuando existe otra fila con la misma
+ *    placa + número de serie y todas las coincidencias válidas representan una
+ *    única identidad compatible.
+ * 2. Si después de ese intento todavía falta DNI/RUC o nombre, asigna los
+ *    marcadores controlados "SIN DNI/RUC" y "SIN RZ".
+ * 3. Cada cambio se devuelve como advertencia para que el administrador lo
+ *    revise y lo autorice antes de confirmar la versión.
  *
  * Nunca modifica el arreglo original recibido.
  */
@@ -132,16 +187,12 @@ export function recuperarIdentidadesDeclaracionesSisgat(
   filasEntrada: string[][],
 ): ResultadoRecuperacionIdentidades {
   const filas = filasEntrada.map((fila) => [...fila]);
-
   const candidatosPorVehiculo = new Map<string, IdentidadCandidata[]>();
 
   for (let indice = 0; indice < filas.length; indice += 1) {
     const fila = filas[indice];
-
     const documento = normalizarDocumento(fila[INDICE_DOCUMENTO] ?? "");
-
     const nombre = (fila[INDICE_NOMBRE] ?? "").trim();
-
     const claveVehiculo = crearClaveVehiculo(fila);
 
     if (!documento || !nombre || !claveVehiculo) {
@@ -158,23 +209,19 @@ export function recuperarIdentidadesDeclaracionesSisgat(
     };
 
     const candidatos = candidatosPorVehiculo.get(claveVehiculo) ?? [];
-
     candidatos.push(candidato);
-
     candidatosPorVehiculo.set(claveVehiculo, candidatos);
   }
 
   const advertencias: AdvertenciaIdentidadRecuperada[] = [];
+  const filasConRecuperacion = new Set<number>();
 
+  // 1) Recuperación segura usando placa + serie.
   for (let indice = 0; indice < filas.length; indice += 1) {
     const fila = filas[indice];
-
     const documentoActual = normalizarDocumento(fila[INDICE_DOCUMENTO] ?? "");
-
     const nombreActual = (fila[INDICE_NOMBRE] ?? "").trim();
-
     const faltaDocumento = !documentoActual;
-
     const faltaNombre = !nombreActual;
 
     if (!faltaDocumento && !faltaNombre) {
@@ -188,7 +235,6 @@ export function recuperarIdentidadesDeclaracionesSisgat(
     }
 
     const candidatosIniciales = candidatosPorVehiculo.get(claveVehiculo) ?? [];
-
     const candidatosCompatibles = candidatosIniciales.filter((candidato) => {
       if (documentoActual && candidato.documento !== documentoActual) {
         return false;
@@ -215,60 +261,77 @@ export function recuperarIdentidadesDeclaracionesSisgat(
     }
 
     const identidad = [...identidadesUnicas.values()][0];
-
     const camposCompletados: CampoIdentidadRecuperado[] = [];
 
     if (faltaDocumento) {
       fila[INDICE_DOCUMENTO] = identidad.documento;
-
       camposCompletados.push("DNI_RUC");
     }
 
     if (faltaNombre) {
       fila[INDICE_NOMBRE] = identidad.nombre;
-
       camposCompletados.push("NOMBRE_RAZON_SOCIAL");
     }
 
     const placa = normalizarPlaca(fila[INDICE_PLACA] ?? "");
-
     const numeroSerie = normalizarSerie(fila[INDICE_SERIE] ?? "");
-
     const filaObjetivo = indice + 2;
 
     advertencias.push({
       id: `IDENTIDAD_RECUPERADA-${filaObjetivo}`,
-
       tipo: "IDENTIDAD_RECUPERADA",
-
       fila: filaObjetivo,
-
       anioDeclaracion: fila[0] ?? "",
-
       numeroDeclaracion: fila[1] ?? "",
-
       placa,
-
       numeroSerie,
-
       camposCompletados,
-
       documentoEnmascarado: enmascararDocumento(identidad.documento),
-
       nombreRecuperado: identidad.nombre,
-
       filaFuente: identidad.filaFuente,
-
       anioDeclaracionFuente: identidad.anioDeclaracionFuente,
-
       numeroDeclaracionFuente: identidad.numeroDeclaracionFuente,
-
       metodo: "PLACA_Y_SERIE_COINCIDENCIA_UNICA",
-
       mensaje:
         "Se completó la identidad usando una única coincidencia exacta de placa y número de serie dentro del mismo reporte. El archivo original no fue modificado.",
     });
+
+    filasConRecuperacion.add(indice);
   }
+
+  // 2) Marcadores controlados para datos que continúan faltando.
+  for (let indice = 0; indice < filas.length; indice += 1) {
+    const fila = filas[indice];
+    const documentoActual = normalizarDocumento(fila[INDICE_DOCUMENTO] ?? "");
+    const nombreActual = (fila[INDICE_NOMBRE] ?? "").trim();
+    const camposCompletados: CampoIdentidadRecuperado[] = [];
+
+    if (!documentoActual) {
+      fila[INDICE_DOCUMENTO] = MARCADOR_DNI_RUC;
+      camposCompletados.push("DNI_RUC");
+    }
+
+    if (!nombreActual) {
+      fila[INDICE_NOMBRE] = MARCADOR_RAZON_SOCIAL;
+      camposCompletados.push("NOMBRE_RAZON_SOCIAL");
+    }
+
+    if (camposCompletados.length === 0) {
+      continue;
+    }
+
+    // Si esta fila ya fue recuperada completamente en la fase anterior,
+    // no debería llegar aquí; la condición se conserva como protección.
+    if (filasConRecuperacion.has(indice)) {
+      continue;
+    }
+
+    advertencias.push(
+      crearAdvertenciaMarcador(fila, indice, camposCompletados),
+    );
+  }
+
+  advertencias.sort((a, b) => a.fila - b.fila);
 
   return {
     filas,

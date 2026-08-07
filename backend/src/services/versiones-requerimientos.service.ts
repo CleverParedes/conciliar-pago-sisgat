@@ -34,6 +34,42 @@ function hashBuffer(buffer: Buffer): string {
   return createHash("sha256").update(buffer).digest("hex");
 }
 
+export function probarArchivoRequerimientos(
+  archivo: { nombreArchivo: string; buffer: Buffer },
+) {
+  const resultado = analizarArchivoRequerimientos(
+    archivo.buffer,
+    archivo.nombreArchivo,
+  );
+
+  return {
+    id: 0,
+    codigo: "PRUEBA",
+    estado:
+      resultado.filasConError === 0
+        ? EstadoVersionDatos.VALIDADA
+        : EstadoVersionDatos.FALLIDA,
+    fechaAnalisis: new Date(),
+    puedeConfirmarse: resultado.filasConError === 0,
+    reanalisis: false,
+    totales: {
+      requerimientos: resultado.totalRequerimientos,
+      detalles: resultado.totalDetalles,
+      activos: resultado.activos,
+      anulados: resultado.anulados,
+      errores: resultado.filasConError,
+    },
+    archivo: {
+      nombre: archivo.nombreArchivo,
+      totalFilas: resultado.totalFilas,
+      filasValidas: resultado.filasValidas,
+      filasConError: resultado.filasConError,
+      errores: resultado.errores.slice(0, 20),
+      advertencias: resultado.advertencias.slice(0, 20),
+    },
+  };
+}
+
 export async function analizarVersionRequerimientos(
   input: AnalizarVersionRequerimientosInput,
 ) {

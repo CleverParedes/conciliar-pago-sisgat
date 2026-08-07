@@ -9,6 +9,7 @@ import multer from "multer";
 import type { SesionPublica } from "../services/auth.service";
 import { confirmarVersionRequerimientos } from "../services/confirmar-version-requerimientos.service";
 import {
+  probarArchivoRequerimientos,
   analizarVersionRequerimientos,
   ErrorVersionRequerimientos,
   listarVersionesRequerimientos,
@@ -96,6 +97,38 @@ versionesRequerimientosRouter.get(
         ok: true,
         message: "Historial de Requerimientos SisGAT obtenido correctamente.",
         data: versiones,
+      });
+    } catch (error) {
+      responderError(error, res, next);
+    }
+  },
+);
+
+versionesRequerimientosRouter.post(
+  "/probar",
+  upload.single("requerimientos"),
+  async (req, res, next): Promise<void> => {
+    try {
+      obtenerAdministrador(res);
+
+      if (!req.file) {
+        throw new ErrorVersionRequerimientos(
+          'Debes enviar el reporte en el campo "requerimientos".',
+        );
+      }
+
+      const resultado = probarArchivoRequerimientos({
+        nombreArchivo: req.file.originalname,
+        buffer: req.file.buffer,
+      });
+
+      res.status(200).json({
+        ok: true,
+        message:
+          resultado.puedeConfirmarse
+            ? "Prueba completada: el archivo es válido. No se creó ninguna versión ni se modificaron datos."
+            : "Prueba completada: se detectaron errores. No se creó ninguna versión ni se modificaron datos.",
+        data: resultado,
       });
     } catch (error) {
       responderError(error, res, next);

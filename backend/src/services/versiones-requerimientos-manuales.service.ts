@@ -81,6 +81,56 @@ function datosOriginalesJson(
   ) as Prisma.InputJsonObject;
 }
 
+export async function probarArchivoRequerimientosManuales(
+  input: {
+    archivo: {
+      nombreArchivo: string;
+      buffer: Buffer;
+    };
+    anioGestion?: number;
+  },
+) {
+  const resultado =
+    await analizarArchivoRequerimientosManuales(
+      input.archivo.buffer,
+      input.archivo.nombreArchivo,
+      input.anioGestion,
+    );
+
+  return {
+    id: 0,
+    codigo: "PRUEBA",
+    estado:
+      resultado.filasConError === 0
+        ? EstadoVersionDatos.VALIDADA
+        : EstadoVersionDatos.FALLIDA,
+    anioGestion: resultado.anioGestion,
+    fechaAnalisis: new Date(),
+    puedeConfirmarse: resultado.filasConError === 0,
+    reanalisis: false,
+    totales: {
+      registros: resultado.filasValidas,
+      periodos: resultado.totalPeriodos,
+      errores: resultado.filasConError,
+      advertencias: resultado.advertencias.length,
+      placasNormalizables: resultado.placasNormalizables,
+    },
+    clasificacion: {
+      porTipoRegistro: resultado.porTipoRegistro,
+      porEstadoManual: resultado.porEstadoManual,
+    },
+    archivo: {
+      nombre: input.archivo.nombreArchivo,
+      hoja: resultado.nombreHoja,
+      totalFilas: resultado.totalFilas,
+      filasValidas: resultado.filasValidas,
+      filasConError: resultado.filasConError,
+      errores: resultado.errores.slice(0, 20),
+      advertencias: resultado.advertencias.slice(0, 30),
+    },
+  };
+}
+
 export async function analizarVersionRequerimientosManuales(
   input:
     AnalizarVersionRequerimientosManualesInput,

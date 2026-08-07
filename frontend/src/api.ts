@@ -82,6 +82,20 @@ async function solicitar<T>(
   return contenido.data;
 }
 
+export function probarArchivoSinAplicar<T>(
+  ruta: string,
+  campoArchivo: string,
+  archivo: File,
+): Promise<T> {
+  const formulario = new FormData();
+  formulario.append(campoArchivo, archivo);
+
+  return solicitar<T>(ruta, {
+    method: "POST",
+    body: formulario,
+  });
+}
+
 export async function obtenerSesionActual(): Promise<SesionActual | null> {
   const respuesta = await fetch(`${API_URL}/auth/me`, {
     credentials: "include",

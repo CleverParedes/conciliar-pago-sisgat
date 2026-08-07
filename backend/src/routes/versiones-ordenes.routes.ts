@@ -13,6 +13,7 @@ import {
   confirmarVersionOrdenes,
 } from "../services/confirmar-version-ordenes.service";
 import {
+  probarArchivoOrdenes,
   analizarVersionOrdenes,
   ErrorVersionOrdenes,
   listarVersionesOrdenes,
@@ -135,6 +136,38 @@ versionesOrdenesRouter.get(
         message:
           "Detalle de la versión obtenido correctamente.",
         data: version,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+versionesOrdenesRouter.post(
+  "/probar",
+  upload.single("archivo"),
+  async (req, res, next): Promise<void> => {
+    try {
+      obtenerAdministrador(res);
+
+      if (!req.file) {
+        throw new ErrorVersionOrdenes(
+          'Debes enviar el reporte de órdenes en el campo "archivo".',
+        );
+      }
+
+      const resultado = probarArchivoOrdenes({
+        nombreArchivo: req.file.originalname,
+        buffer: req.file.buffer,
+      });
+
+      res.status(200).json({
+        ok: true,
+        message:
+          resultado.puedeConfirmarse
+            ? "Prueba completada: el archivo es válido. No se creó ninguna versión ni se modificaron datos."
+            : "Prueba completada: se detectaron errores. No se creó ninguna versión ni se modificaron datos.",
+        data: resultado,
       });
     } catch (error) {
       next(error);

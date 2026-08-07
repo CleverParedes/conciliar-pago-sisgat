@@ -9,6 +9,7 @@ import multer from "multer";
 import type { SesionPublica } from "../services/auth.service";
 import { confirmarVersionRequerimientosManuales } from "../services/confirmar-version-requerimientos-manuales.service";
 import {
+  probarArchivoRequerimientosManuales,
   analizarVersionRequerimientosManuales,
   ErrorVersionRequerimientosManuales,
   listarVersionesRequerimientosManuales,
@@ -92,6 +93,40 @@ versionesRequerimientosManualesRouter.get(
         ok: true,
         message: "Historial de Requerimientos manuales obtenido correctamente.",
         data: versiones,
+      });
+    } catch (error) {
+      responderError(error, res, next);
+    }
+  },
+);
+
+versionesRequerimientosManualesRouter.post(
+  "/probar",
+  upload.single("archivo"),
+  async (req, res, next): Promise<void> => {
+    try {
+      obtenerAdministrador(res);
+
+      if (!req.file) {
+        throw new ErrorVersionRequerimientosManuales(
+          'Debes enviar el Excel en el campo "archivo".',
+        );
+      }
+
+      const resultado = await probarArchivoRequerimientosManuales({
+        archivo: {
+          nombreArchivo: req.file.originalname,
+          buffer: req.file.buffer,
+        },
+      });
+
+      res.status(200).json({
+        ok: true,
+        message:
+          resultado.puedeConfirmarse
+            ? "Prueba completada: el archivo es válido. No se creó ninguna versión ni se modificaron datos."
+            : "Prueba completada: se detectaron errores. No se creó ninguna versión ni se modificaron datos.",
+        data: resultado,
       });
     } catch (error) {
       responderError(error, res, next);

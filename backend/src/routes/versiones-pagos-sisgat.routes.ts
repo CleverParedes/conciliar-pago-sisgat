@@ -13,6 +13,7 @@ import {
   confirmarVersionPagosSisgat,
 } from "../services/confirmar-version-pagos-sisgat.service";
 import {
+  probarArchivoPagosSisgat,
   analizarVersionPagosSisgat,
   ErrorVersionPagosSisgat,
   listarVersionesPagosSisgat,
@@ -135,6 +136,38 @@ versionesPagosSisgatRouter.get(
         message:
           "Detalle de la versión obtenido correctamente.",
         data: version,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+versionesPagosSisgatRouter.post(
+  "/probar",
+  upload.single("archivo"),
+  async (req, res, next): Promise<void> => {
+    try {
+      obtenerAdministrador(res);
+
+      if (!req.file) {
+        throw new ErrorVersionPagosSisgat(
+          'Debes enviar el reporte de pagos en el campo "archivo".',
+        );
+      }
+
+      const resultado = probarArchivoPagosSisgat({
+        nombreArchivo: req.file.originalname,
+        buffer: req.file.buffer,
+      });
+
+      res.status(200).json({
+        ok: true,
+        message:
+          resultado.puedeConfirmarse
+            ? "Prueba completada: el archivo es válido. No se creó ninguna versión ni se modificaron datos."
+            : "Prueba completada: se detectaron errores. No se creó ninguna versión ni se modificaron datos.",
+        data: resultado,
       });
     } catch (error) {
       next(error);

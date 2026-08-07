@@ -9,6 +9,7 @@ import multer from "multer";
 import type { SesionPublica } from "../services/auth.service";
 import { confirmarVersionLiquidaciones } from "../services/confirmar-version-liquidaciones.service";
 import {
+  probarArchivoLiquidaciones,
   analizarVersionLiquidaciones,
   ErrorVersionLiquidaciones,
   listarVersionesLiquidaciones,
@@ -82,6 +83,44 @@ versionesLiquidacionesRouter.get(
         ok: true,
         message: "Historial de liquidaciones obtenido correctamente.",
         data: versiones,
+      });
+    } catch (error) {
+      responderError(error, res, next);
+    }
+  },
+);
+
+versionesLiquidacionesRouter.post(
+  "/probar",
+  upload.single("liquidaciones"),
+  async (req, res, next): Promise<void> => {
+    try {
+      obtenerAdministrador(res);
+
+      if (!req.file) {
+        throw new ErrorVersionLiquidaciones(
+          'Debes enviar el reporte de liquidaciones en el campo "liquidaciones".',
+        );
+      }
+
+      if (!/\.(txt|csv)$/i.test(req.file.originalname)) {
+        throw new ErrorVersionLiquidaciones(
+          "Solo se permiten archivos TXT o CSV.",
+        );
+      }
+
+      const resultado = probarArchivoLiquidaciones({
+        nombreArchivo: req.file.originalname,
+        buffer: req.file.buffer,
+      });
+
+      res.status(200).json({
+        ok: true,
+        message:
+          resultado.puedeConfirmarse
+            ? "Prueba completada: el archivo es válido. No se creó ninguna versión ni se modificaron datos."
+            : "Prueba completada: se detectaron errores. No se creó ninguna versión ni se modificaron datos.",
+        data: resultado,
       });
     } catch (error) {
       responderError(error, res, next);

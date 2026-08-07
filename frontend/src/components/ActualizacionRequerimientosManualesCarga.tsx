@@ -8,6 +8,7 @@ import {
 
 import "../requerimientos-manuales-9a6.css";
 
+import { probarArchivoSinAplicar } from "../api";
 import {
   analizarVersionRequerimientosManuales,
   confirmarVersionRequerimientosManuales,
@@ -52,6 +53,7 @@ export default function ActualizacionRequerimientosManualesCarga({
   const [archivo, setArchivo] = useState<File | null>(null);
   const [comentario, setComentario] = useState("");
   const [analizando, setAnalizando] = useState(false);
+  const [modoPrueba, setModoPrueba] = useState(false);
   const [confirmando, setConfirmando] = useState(false);
   const [segundos, setSegundos] = useState(0);
   const [mensaje, setMensaje] = useState<string | null>(null);
@@ -78,6 +80,7 @@ export default function ActualizacionRequerimientosManualesCarga({
 
   function seleccionarArchivo(nuevo: File | null): void {
     setArchivo(nuevo);
+    setModoPrueba(false);
     setAnalisis(null);
     setConfirmacion(null);
     setMensaje(null);
@@ -100,6 +103,7 @@ export default function ActualizacionRequerimientosManualesCarga({
 
     try {
       setAnalizando(true);
+      setModoPrueba(false);
       setError(null);
       setMensaje(null);
       setConfirmacion(null);
@@ -115,6 +119,50 @@ export default function ActualizacionRequerimientosManualesCarga({
         resultado.puedeConfirmarse
           ? "El Excel fue validado. Revisa el resumen antes de confirmar."
           : "El Excel contiene errores y no puede confirmarse.",
+      );
+    } catch (errorAnalisis) {
+      setError(mensajeError(errorAnalisis));
+    } finally {
+      setAnalizando(false);
+    }
+  }
+
+  async function probarArchivo(): Promise<void> {
+    if (!archivo) {
+      setError("Selecciona el Excel de Requerimientos manuales.");
+      return;
+    }
+
+    if (!/\.xlsx$/i.test(archivo.name)) {
+      setError("El archivo debe tener extensión .xlsx.");
+      return;
+    }
+
+    if (archivo.size > 30 * 1024 * 1024) {
+      setError("El archivo supera el límite de 30 MB.");
+      return;
+    }
+
+    try {
+      setAnalizando(true);
+      setModoPrueba(true);
+      setError(null);
+      setMensaje(null);
+      setConfirmacion(null);
+      setAdvertenciasRevisadas(false);
+
+      const resultado =
+        await probarArchivoSinAplicar<ResultadoAnalisisVersionRequerimientosManuales>(
+          "/versiones-requerimientos-manuales/probar",
+          "archivo",
+          archivo,
+        );
+
+      setAnalisis(resultado);
+      setMensaje(
+        resultado.puedeConfirmarse
+          ? `Prueba válida: se detectaron ${resultado.totales.advertencias} advertencia(s). No se creó ninguna versión ni se modificaron datos.`
+          : `Prueba completada: se detectaron ${resultado.totales.errores} fila(s) con error. No se modificaron datos.`,
       );
     } catch (errorAnalisis) {
       setError(mensajeError(errorAnalisis));
@@ -154,7 +202,8 @@ export default function ActualizacionRequerimientosManualesCarga({
 
   const tieneAdvertencias = (analisis?.totales.advertencias ?? 0) > 0;
   const puedeAbrirConfirmacion = Boolean(
-    analisis?.puedeConfirmarse &&
+    !modoPrueba &&
+      analisis?.puedeConfirmarse &&
       (!tieneAdvertencias || advertenciasRevisadas),
   );
 
@@ -188,7 +237,11 @@ export default function ActualizacionRequerimientosManualesCarga({
       {error && <div className="req-manual-alerta req-manual-alerta-error">{repararTextoUtf8(error)}</div>}
       {mensaje && (
         <div className="req-manual-alerta req-manual-alerta-correcta">
-          <strong>{confirmacion ? "Actualización completada" : "Análisis finalizado"}</strong>
+          <strong>{confirmacion
+              ? "Actualización completada"
+              : modoPrueba
+                ? "Prueba finalizada"
+                : "Análisis finalizado"}</strong>
           <span>{repararTextoUtf8(mensaje)}</span>
         </div>
       )}
@@ -222,8 +275,16 @@ export default function ActualizacionRequerimientosManualesCarga({
           <button type="button" className="boton-ligero" disabled={analizando || confirmando} onClick={limpiar}>
             Limpiar
           </button>
+          <button
+            type="button"
+            className="boton-ligero"
+            disabled={!archivo || analizando || confirmando}
+            onClick={() => void probarArchivo()}
+          >
+            {analizando && modoPrueba ? "Probando…" : "Probar Excel"}
+          </button>
           <button type="submit" className="boton-primario" disabled={!archivo || analizando || confirmando}>
-            {analizando ? "Analizando…" : "Analizar Excel"}
+            {analizando && !modoPrueba ? "Analizando…" : "Analizar Excel"}
           </button>
         </div>
       </form>
@@ -232,11 +293,17 @@ export default function ActualizacionRequerimientosManualesCarga({
         <section className="req-manual-analisis">
           <header>
             <div>
-              <span>Resultado del análisis</span>
-              <h3>{analisis.codigo}</h3>
+              <span>{modoPrueba ? "Análisis de prueba" : "Resultado del análisis"}</span>
+              <h3>{modoPrueba ? "NO GUARDADA" : analisis.codigo}</h3>
               <small>Año detectado automáticamente: {analisis.anioGestion}</small>
             </div>
-            <span className={claseEstado(analisis.estado)}>{analisis.estado}</span>
+            <span className={claseEstado(analisis.estado)}>
+              {modoPrueba
+                ? analisis.puedeConfirmarse
+                  ? "PRUEBA VÁLIDA"
+                  : "PRUEBA CON ERRORES"
+                : analisis.estado}
+            </span>
           </header>
 
           <div className="req-manual-metricas">
@@ -271,14 +338,16 @@ export default function ActualizacionRequerimientosManualesCarga({
                   <strong>Fila {item.fila}</strong>{" · "}{repararTextoUtf8(item.campo)}{" · "}{repararTextoUtf8(item.mensaje)}
                 </p>
               ))}
-              <label className="req-manual-revision-check">
-                <input
-                  type="checkbox"
-                  checked={advertenciasRevisadas}
-                  onChange={(evento) => setAdvertenciasRevisadas(evento.target.checked)}
-                />
-                <span>He revisado las advertencias y acepto los ajustes detectados.</span>
-              </label>
+              {!modoPrueba && (
+                <label className="req-manual-revision-check">
+                  <input
+                    type="checkbox"
+                    checked={advertenciasRevisadas}
+                    onChange={(evento) => setAdvertenciasRevisadas(evento.target.checked)}
+                  />
+                  <span>He revisado las advertencias y acepto los ajustes detectados.</span>
+                </label>
+              )}
             </div>
           )}
 
@@ -299,14 +368,21 @@ export default function ActualizacionRequerimientosManualesCarga({
               <strong>{analisis.archivo.nombre}</strong>
               <small>{analisis.archivo.hoja}</small>
             </div>
-            <button
-              type="button"
-              className="boton-primario"
-              disabled={!puedeAbrirConfirmacion || confirmando}
-              onClick={() => setMostrarModal(true)}
-            >
-              Confirmar versión
-            </button>
+            {modoPrueba ? (
+              <div className="req-manual-alerta req-manual-alerta-correcta">
+                <strong>Modo de prueba</strong>
+                <span>El análisis no creó una versión, no guardó el Excel y no modificó PostgreSQL.</span>
+              </div>
+            ) : (
+              <button
+                type="button"
+                className="boton-primario"
+                disabled={!puedeAbrirConfirmacion || confirmando}
+                onClick={() => setMostrarModal(true)}
+              >
+                Confirmar versión
+              </button>
+            )}
           </div>
         </section>
       )}

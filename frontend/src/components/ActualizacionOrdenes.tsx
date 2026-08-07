@@ -11,6 +11,7 @@ import "../ordenes-9a3.css";
 import {
   analizarVersionOrdenes,
   confirmarVersionOrdenes,
+  probarArchivoSinAplicar,
 } from "../api";
 import type {
   ResultadoAnalisisOrdenes,
@@ -50,6 +51,8 @@ export default function ActualizacionOrdenes({
   const [comentario, setComentario] =
     useState("");
   const [analizando, setAnalizando] =
+    useState(false);
+  const [modoPrueba, setModoPrueba] =
     useState(false);
   const [confirmando, setConfirmando] =
     useState(false);
@@ -97,6 +100,7 @@ export default function ActualizacionOrdenes({
     nuevo: File | null,
   ): void {
     setArchivo(nuevo);
+    setModoPrueba(false);
     setAnalisis(null);
     setConfirmacion(null);
     setError(null);
@@ -141,6 +145,7 @@ export default function ActualizacionOrdenes({
 
     try {
       setAnalizando(true);
+      setModoPrueba(false);
 
       const resultado =
         await analizarVersionOrdenes(
@@ -161,8 +166,53 @@ export default function ActualizacionOrdenes({
     }
   }
 
+  async function probarArchivo(): Promise<void> {
+    setError(null);
+    setMensaje(null);
+    setConfirmacion(null);
+
+    if (!archivo) {
+      setError("Selecciona el reporte de órdenes de pago.");
+      return;
+    }
+
+    if (!/\.(txt|csv)$/i.test(archivo.name)) {
+      setError("El archivo debe ser TXT o CSV.");
+      return;
+    }
+
+    if (archivo.size > 25 * 1024 * 1024) {
+      setError("El archivo supera el límite de 25 MB.");
+      return;
+    }
+
+    try {
+      setAnalizando(true);
+      setModoPrueba(true);
+
+      const resultado =
+        await probarArchivoSinAplicar<ResultadoAnalisisOrdenes>(
+          "/versiones-ordenes/probar",
+          "archivo",
+          archivo,
+        );
+
+      setAnalisis(resultado);
+      setMensaje(
+        resultado.puedeConfirmarse
+          ? "Prueba completada: el archivo es válido. No se creó ninguna versión ni se modificaron datos."
+          : `Prueba completada: se detectaron ${resultado.totales.errores} fila(s) con error. No se modificaron datos.`,
+      );
+    } catch (e) {
+      setError(mensajeError(e));
+    } finally {
+      setAnalizando(false);
+    }
+  }
+
   function solicitarConfirmacion(): void {
     if (
+      modoPrueba ||
       !analisis?.puedeConfirmarse
     ) {
       return;
@@ -259,7 +309,9 @@ export default function ActualizacionOrdenes({
           <strong>
             {confirmacion
               ? "Actualización completada"
-              : "Análisis finalizado"}
+              : modoPrueba
+                ? "Prueba finalizada"
+                : "Análisis finalizado"}
           </strong>
           <span>{repararTextoUtf8(mensaje)}</span>
         </div>
@@ -329,6 +381,21 @@ export default function ActualizacionOrdenes({
           </button>
 
           <button
+            type="button"
+            className="boton-ligero"
+            disabled={
+              analizando ||
+              confirmando ||
+              !archivo
+            }
+            onClick={() => void probarArchivo()}
+          >
+            {analizando && modoPrueba
+              ? "Probando…"
+              : "Probar archivo"}
+          </button>
+
+          <button
             type="submit"
             className="boton-primario"
             disabled={
@@ -337,7 +404,7 @@ export default function ActualizacionOrdenes({
               !archivo
             }
           >
-            {analizando
+            {analizando && !modoPrueba
               ? "Analizando…"
               : "Analizar archivo"}
           </button>
@@ -348,8 +415,8 @@ export default function ActualizacionOrdenes({
         <section className="ordenes-analisis">
           <header>
             <div>
-              <span>Versión analizada</span>
-              <h3>#{analisis.id}</h3>
+              <span>{modoPrueba ? "Análisis de prueba" : "Versión analizada"}</span>
+              <h3>{modoPrueba ? "NO GUARDADA" : `#${analisis.id}`}</h3>
             </div>
 
             <span
@@ -359,9 +426,13 @@ export default function ActualizacionOrdenes({
                   : "ordenes-estado ordenes-estado-error"
               }
             >
-              {analisis.puedeConfirmarse
-                ? "Lista para confirmar"
-                : "Con errores"}
+              {modoPrueba
+                ? analisis.puedeConfirmarse
+                  ? "Prueba válida"
+                  : "Prueba con errores"
+                : analisis.puedeConfirmarse
+                  ? "Lista para confirmar"
+                  : "Con errores"}
             </span>
           </header>
 
@@ -409,19 +480,26 @@ export default function ActualizacionOrdenes({
             </div>
           )}
 
-          <button
-            type="button"
-            className="boton-primario"
-            disabled={
-              !analisis.puedeConfirmarse ||
-              confirmando
-            }
-            onClick={
-              solicitarConfirmacion
-            }
-          >
-            Confirmar nueva versión de órdenes
-          </button>
+          {modoPrueba ? (
+            <div className="ordenes-mensaje ordenes-mensaje-info">
+              <strong>Modo de prueba</strong>
+              <span>Este resultado es temporal. No se creó una versión, no se guardó el archivo y no se modificó PostgreSQL.</span>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="boton-primario"
+              disabled={
+                !analisis.puedeConfirmarse ||
+                confirmando
+              }
+              onClick={
+                solicitarConfirmacion
+              }
+            >
+              Confirmar nueva versión de órdenes
+            </button>
+          )}
         </section>
       )}
 

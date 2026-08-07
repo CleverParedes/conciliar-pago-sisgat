@@ -11,6 +11,7 @@ import "../liquidaciones-9a4.css";
 import {
   analizarVersionLiquidaciones,
   confirmarVersionLiquidaciones,
+  probarArchivoSinAplicar,
 } from "../api";
 import type {
   ResultadoAnalisisLiquidaciones,
@@ -52,6 +53,8 @@ export default function ActualizacionLiquidaciones({
   const [comentario, setComentario] =
     useState("");
   const [analizando, setAnalizando] =
+    useState(false);
+  const [modoPrueba, setModoPrueba] =
     useState(false);
   const [confirmando, setConfirmando] =
     useState(false);
@@ -101,6 +104,7 @@ export default function ActualizacionLiquidaciones({
     nuevoArchivo: File | null,
   ): void {
     setArchivo(nuevoArchivo);
+    setModoPrueba(false);
     setAnalisis(null);
     setConfirmacion(null);
     setError(null);
@@ -159,6 +163,7 @@ export default function ActualizacionLiquidaciones({
 
     try {
       setAnalizando(true);
+      setModoPrueba(false);
 
       const resultado =
         await analizarVersionLiquidaciones(
@@ -184,8 +189,52 @@ export default function ActualizacionLiquidaciones({
     }
   }
 
+  async function probarArchivo(): Promise<void> {
+    setError(null);
+    setMensaje(null);
+    setConfirmacion(null);
+
+    if (!archivo) {
+      setError("Selecciona el reporte de Liquidaciones.");
+      return;
+    }
+
+    if (!/\.(txt|csv)$/i.test(archivo.name)) {
+      setError("El archivo debe tener extensión TXT o CSV.");
+      return;
+    }
+
+    if (archivo.size > 25 * 1024 * 1024) {
+      setError("El archivo supera el límite de 25 MB.");
+      return;
+    }
+
+    try {
+      setAnalizando(true);
+      setModoPrueba(true);
+
+      const resultado =
+        await probarArchivoSinAplicar<ResultadoAnalisisLiquidaciones>(
+          "/versiones-liquidaciones/probar",
+          "liquidaciones",
+          archivo,
+        );
+
+      setAnalisis(resultado);
+      setMensaje(
+        resultado.puedeConfirmarse
+          ? "Prueba válida: el archivo cumple las reglas. No se creó ninguna versión ni se modificaron datos."
+          : `Prueba completada: se detectaron ${resultado.totales.errores} fila(s) con error. No se modificaron datos.`,
+      );
+    } catch (errorAnalisis) {
+      setError(obtenerMensajeError(errorAnalisis));
+    } finally {
+      setAnalizando(false);
+    }
+  }
+
   function solicitarConfirmacion(): void {
-    if (!analisis?.puedeConfirmarse) {
+    if (modoPrueba || !analisis?.puedeConfirmarse) {
       return;
     }
 
@@ -272,7 +321,9 @@ export default function ActualizacionLiquidaciones({
           <strong>
             {confirmacion
               ? "Actualización completada"
-              : "Análisis finalizado"}
+              : modoPrueba
+                ? "Prueba finalizada"
+                : "Análisis finalizado"}
           </strong>
           <span>{repararTextoUtf8(mensaje)}</span>
         </div>
@@ -347,6 +398,21 @@ export default function ActualizacionLiquidaciones({
           </button>
 
           <button
+            type="button"
+            className="boton-ligero"
+            disabled={
+              !archivo ||
+              analizando ||
+              confirmando
+            }
+            onClick={() => void probarArchivo()}
+          >
+            {analizando && modoPrueba
+              ? "Probando…"
+              : "Probar archivo"}
+          </button>
+
+          <button
             type="submit"
             className="boton-primario"
             disabled={
@@ -355,7 +421,7 @@ export default function ActualizacionLiquidaciones({
               confirmando
             }
           >
-            {analizando
+            {analizando && !modoPrueba
               ? "Analizando…"
               : "Analizar archivo"}
           </button>
@@ -366,8 +432,8 @@ export default function ActualizacionLiquidaciones({
         <section className="liquidaciones-analisis">
           <header>
             <div>
-              <span>Versión analizada</span>
-              <h3>{analisis.codigo}</h3>
+              <span>{modoPrueba ? "Análisis de prueba" : "Versión analizada"}</span>
+              <h3>{modoPrueba ? "NO GUARDADA" : analisis.codigo}</h3>
             </div>
 
             <span
@@ -377,9 +443,13 @@ export default function ActualizacionLiquidaciones({
                   : "liquidaciones-estado liquidaciones-estado-error"
               }
             >
-              {analisis.puedeConfirmarse
-                ? "Lista para confirmar"
-                : "Contiene errores"}
+              {modoPrueba
+                ? analisis.puedeConfirmarse
+                  ? "Prueba válida"
+                  : "Prueba con errores"
+                : analisis.puedeConfirmarse
+                  ? "Lista para confirmar"
+                  : "Contiene errores"}
             </span>
           </header>
 
@@ -459,17 +529,24 @@ export default function ActualizacionLiquidaciones({
               </strong>
             </div>
 
-            <button
-              type="button"
-              className="boton-primario"
-              disabled={
-                !analisis.puedeConfirmarse ||
-                confirmando
-              }
-              onClick={solicitarConfirmacion}
-            >
-              Confirmar versión
-            </button>
+            {modoPrueba ? (
+              <div className="liquidaciones-mensaje liquidaciones-mensaje-info">
+                <strong>Modo de prueba</strong>
+                <span>El análisis no creó una versión, no guardó el archivo y no modificó PostgreSQL.</span>
+              </div>
+            ) : (
+              <button
+                type="button"
+                className="boton-primario"
+                disabled={
+                  !analisis.puedeConfirmarse ||
+                  confirmando
+                }
+                onClick={solicitarConfirmacion}
+              >
+                Confirmar versión
+              </button>
+            )}
           </div>
         </section>
       )}

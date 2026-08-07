@@ -232,7 +232,7 @@ export type CampoIdentidadRecuperado = "DNI_RUC" | "NOMBRE_RAZON_SOCIAL";
 
 export interface AdvertenciaAjusteAutomatico {
   id: string;
-  tipo: "IDENTIDAD_RECUPERADA";
+  tipo: "IDENTIDAD_RECUPERADA" | "IDENTIDAD_MARCADOR";
   fila: number;
   anioDeclaracion: string;
   numeroDeclaracion: string;
@@ -244,7 +244,9 @@ export interface AdvertenciaAjusteAutomatico {
   filaFuente: number;
   anioDeclaracionFuente: string;
   numeroDeclaracionFuente: string;
-  metodo: "PLACA_Y_SERIE_COINCIDENCIA_UNICA";
+  metodo:
+    | "PLACA_Y_SERIE_COINCIDENCIA_UNICA"
+    | "MARCADOR_DATO_FALTANTE";
   mensaje: string;
 }
 

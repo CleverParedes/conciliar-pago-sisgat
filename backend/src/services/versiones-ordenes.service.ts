@@ -497,6 +497,37 @@ function analizarOrdenes(
   };
 }
 
+export function probarArchivoOrdenes(
+  archivo: ArchivoEntrada,
+) {
+  const resultado = analizarOrdenes(archivo);
+  const totalErrores = resultado.filasConError;
+
+  return {
+    id: 0,
+    codigo: "PRUEBA",
+    estado:
+      totalErrores === 0
+        ? EstadoVersionDatos.VALIDADA
+        : EstadoVersionDatos.FALLIDA,
+    fechaAnalisis: new Date(),
+    puedeConfirmarse: totalErrores === 0,
+    reanalisis: false,
+    totales: {
+      ordenes: resultado.totalOrdenes,
+      detalles: resultado.totalDetalles,
+      errores: totalErrores,
+    },
+    archivo: {
+      nombre: archivo.nombreArchivo,
+      totalFilas: resultado.totalFilas,
+      filasValidas: resultado.filasValidas,
+      filasConError: resultado.filasConError,
+      errores: resultado.errores.slice(0, 20),
+    },
+  };
+}
+
 export async function analizarVersionOrdenes(
   input: AnalizarVersionOrdenesInput,
 ) {

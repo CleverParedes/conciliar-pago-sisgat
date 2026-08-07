@@ -18,6 +18,7 @@ import { leerReporteDeclaracionesPagosSisgat } from "./lector-reporte-sisgat";
 
 import {
   advertenciaIdentidadRecuperadaComoJson,
+  MARCADOR_DNI_RUC,
   recuperarIdentidadesDeclaracionesSisgat,
   type AdvertenciaIdentidadRecuperada,
 } from "./recuperar-identidades-sisgat";
@@ -73,7 +74,27 @@ function normalizarTexto(valor: string): string {
 }
 
 function normalizarDocumento(valor: string): string {
+  if (normalizarTexto(valor) === normalizarTexto(MARCADOR_DNI_RUC)) {
+    return MARCADOR_DNI_RUC;
+  }
+
   return valor.replace(/\D/g, "");
+}
+
+function documentoSinIdentidad(documento: string): boolean {
+  return documento === MARCADOR_DNI_RUC;
+}
+
+function codigoContribuyenteSinDocumento(
+  anioDeclaracion: number,
+  numeroDeclaracion: string,
+): string {
+  const huella = createHash("sha256")
+    .update(`${anioDeclaracion}|${numeroDeclaracion}`)
+    .digest("hex")
+    .slice(0, 18);
+
+  return `SISGAT-SD-${huella}`;
 }
 
 function normalizarPlaca(valor: string): string {
@@ -562,33 +583,51 @@ export async function importarDeclaracionesDesdeBuffer(
         contexto.cliente,
 
         async (tx) => {
-          const contribuyente = await tx.contribuyente.upsert({
-            where: {
-              numeroDocumento: documento,
-            },
+          const contribuyente = documentoSinIdentidad(documento)
+            ? await tx.contribuyente.upsert({
+                where: {
+                  codigo: codigoContribuyenteSinDocumento(
+                    anioDeclaracion,
+                    numeroDeclaracion,
+                  ),
+                },
 
-            update: {
-              tipoDocumento: obtenerTipoDocumento(documento),
+                update: {
+                  tipoDocumento: "SIN_DNI_RUC",
+                  numeroDocumento: null,
+                  nombreRazonSocial: nombres,
+                  ...(direccion ? { direccion } : {}),
+                },
 
-              nombreRazonSocial: nombres,
+                create: {
+                  codigo: codigoContribuyenteSinDocumento(
+                    anioDeclaracion,
+                    numeroDeclaracion,
+                  ),
+                  tipoDocumento: "SIN_DNI_RUC",
+                  numeroDocumento: null,
+                  nombreRazonSocial: nombres,
+                  direccion: direccion || null,
+                },
+              })
+            : await tx.contribuyente.upsert({
+                where: {
+                  numeroDocumento: documento,
+                },
 
-              ...(direccion
-                ? {
-                    direccion,
-                  }
-                : {}),
-            },
+                update: {
+                  tipoDocumento: obtenerTipoDocumento(documento),
+                  nombreRazonSocial: nombres,
+                  ...(direccion ? { direccion } : {}),
+                },
 
-            create: {
-              tipoDocumento: obtenerTipoDocumento(documento),
-
-              numeroDocumento: documento,
-
-              nombreRazonSocial: nombres,
-
-              direccion: direccion || null,
-            },
-          });
+                create: {
+                  tipoDocumento: obtenerTipoDocumento(documento),
+                  numeroDocumento: documento,
+                  nombreRazonSocial: nombres,
+                  direccion: direccion || null,
+                },
+              });
 
           const declaracion = await tx.declaracion.upsert({
             where: {

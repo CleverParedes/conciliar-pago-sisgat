@@ -10,6 +10,7 @@ import { prisma } from "../lib/prisma";
 import { leerReporteDeclaracionesPagosSisgat } from "./importadores/lector-reporte-sisgat";
 import {
   advertenciaIdentidadRecuperadaComoJson,
+  MARCADOR_DNI_RUC,
   recuperarIdentidadesDeclaracionesSisgat,
   type AdvertenciaIdentidadRecuperada,
 } from "./importadores/recuperar-identidades-sisgat";
@@ -96,6 +97,10 @@ function limpiarFila(
 function normalizarDocumento(
   valor: string,
 ): string {
+  if (normalizarTexto(valor) === normalizarTexto(MARCADOR_DNI_RUC)) {
+    return MARCADOR_DNI_RUC;
+  }
+
   return valor.replace(/\D/g, "");
 }
 
@@ -476,6 +481,42 @@ function analizarDeclaraciones(
     errores,
     advertencias:
       recuperacion.advertencias,
+  };
+}
+
+export function probarArchivoPagosSisgat(
+  archivo: ArchivoEntrada,
+) {
+  const resultado = analizarDeclaraciones(archivo);
+  const totalErrores = resultado.filasConError;
+  const totalAdvertencias = resultado.advertencias.length;
+
+  return {
+    id: 0,
+    codigo: "PRUEBA",
+    estado:
+      totalErrores === 0
+        ? EstadoVersionDatos.VALIDADA
+        : EstadoVersionDatos.FALLIDA,
+    fechaAnalisis: new Date(),
+    puedeConfirmarse: totalErrores === 0,
+    requiereRevisionAjustes: totalAdvertencias > 0,
+    totalAdvertencias,
+    advertencias: resultado.advertencias,
+    reanalisis: false,
+    totales: {
+      declaraciones: resultado.totalDeclaraciones,
+      recibos: resultado.totalRecibos,
+      errores: totalErrores,
+    },
+    archivo: {
+      nombre: archivo.nombreArchivo,
+      totalFilas: resultado.totalFilas,
+      filasValidas: resultado.filasValidas,
+      filasConError: resultado.filasConError,
+      errores: resultado.errores.slice(0, 20),
+      advertencias: resultado.advertencias,
+    },
   };
 }
 

@@ -1,0 +1,66 @@
+.advertencias-identidad-detectadas {
+  margin-top: 1rem;
+  overflow: hidden;
+  border: 1px solid #ead7aa;
+  border-radius: 14px;
+  background: #fffdf8;
+}
+
+.advertencias-identidad-detectadas > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.1rem;
+  border-bottom: 1px solid #ead7aa;
+}
+
+.advertencias-identidad-detectadas > header span {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+}
+
+.advertencias-identidad-detectadas > header h4 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.advertencias-identidad-detectadas > header > strong {
+  display: inline-flex;
+  min-width: 2.25rem;
+  min-height: 2.25rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-size: 1rem;
+}
+
+.advertencias-identidad-explicacion {
+  margin: 0;
+  padding: 0.95rem 1.1rem 0.7rem;
+  line-height: 1.55;
+}
+
+.advertencias-identidad-lista {
+  max-height: 250px;
+  overflow: auto;
+  margin: 0 1.1rem 1rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.advertencias-identidad-lista p {
+  margin: 0;
+  padding: 0.34rem 0;
+  line-height: 1.45;
+}
+
+.advertencias-identidad-lista p + p {
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
