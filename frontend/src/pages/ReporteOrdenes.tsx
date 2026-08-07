@@ -5,6 +5,8 @@ import {
   type FormEvent,
 } from "react";
 
+import { PagosSisgatCelda } from "../components/PagosSisgatCelda";
+
 import {
   descargarReporteOrdenesIndependiente,
   obtenerReporteOrdenesIndependiente,
@@ -899,6 +901,9 @@ export default function Reportes() {
                         Placa
                       </th>
                       <th>
+                        Pagos SisGAT
+                      </th>
+                      <th>
                         Periodos
                       </th>
                       <th>
@@ -955,6 +960,10 @@ export default function Reportes() {
                           <td>
                             {orden.placa ??
                               "—"}
+                          </td>
+
+                          <td>
+                            <PagosSisgatCelda pagos={orden.pagosSisgat ?? []} />
                           </td>
 
                           <td>

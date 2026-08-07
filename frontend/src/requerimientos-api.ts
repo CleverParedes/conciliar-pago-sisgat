@@ -41,6 +41,16 @@ export interface ContribuyenteRequerimiento {
   nombreRazonSocial: string;
 }
 
+export interface PagoSisgatRequerimiento {
+  id: number;
+  anioRecibo: number;
+  numeroRecibo: string;
+  monto: number;
+  trimestreOriginal: string | null;
+  estadoOriginal: string | null;
+  activo: boolean;
+}
+
 export interface RequerimientoResumen {
   id: number;
   anioRequerimiento: number;
@@ -49,6 +59,7 @@ export interface RequerimientoResumen {
   dniRuc: string | null;
   nombre: string | null;
   placa: string | null;
+  pagosSisgat: PagoSisgatRequerimiento[];
   periodo: string | null;
   importeTotal: number;
   totalPagado: number;

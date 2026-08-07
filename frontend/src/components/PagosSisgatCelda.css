@@ -1,0 +1,26 @@
+.pagos-sisgat-celda {
+  display: grid;
+  min-width: 190px;
+  max-width: 320px;
+  gap: 4px;
+}
+
+.pagos-sisgat-celda > strong {
+  color: #164e63;
+  font-size: 0.83rem;
+  font-weight: 800;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.pagos-sisgat-celda > small,
+.pagos-sisgat-vacio {
+  color: #64748b;
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.pagos-sisgat-vacio {
+  display: inline-block;
+  min-width: 150px;
+}

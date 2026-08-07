@@ -49,6 +49,16 @@ export interface ContribuyenteResumen {
   nombreRazonSocial: string;
 }
 
+export interface PagoSisgatResumen {
+  id: number;
+  anioRecibo: number;
+  numeroRecibo: string;
+  monto: number;
+  trimestreOriginal: string | null;
+  estadoOriginal: string | null;
+  activo: boolean;
+}
+
 export interface OrdenResumen {
   id: number;
   anioOrden: number;
@@ -57,6 +67,7 @@ export interface OrdenResumen {
   dniRuc: string;
   nombre: string;
   placa: string;
+  pagosSisgat: PagoSisgatResumen[];
   periodo: string;
   importeTotal: number;
   totalPagado: number;

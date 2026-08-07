@@ -5,6 +5,8 @@ import {
   type FormEvent,
 } from "react";
 
+import { PagosSisgatCelda } from "../components/PagosSisgatCelda";
+
 import {
   descargarReporteRequerimientosSisgat,
   obtenerReporteRequerimientosSisgat,
@@ -510,6 +512,7 @@ export default function ReporteRequerimientosSisgat() {
                       <th>DNI/RUC</th>
                       <th>Contribuyente</th>
                       <th>Placa</th>
+                      <th>Pagos SisGAT</th>
                       <th>Periodos</th>
                       <th>Importe</th>
                       <th>Pagado</th>
@@ -534,6 +537,11 @@ export default function ReporteRequerimientosSisgat() {
                         <td>{requerimiento.dniRuc ?? "—"}</td>
                         <td>{requerimiento.nombre ?? "—"}</td>
                         <td>{requerimiento.placa ?? "—"}</td>
+                        <td>
+                          <PagosSisgatCelda
+                            pagos={requerimiento.pagosSisgat ?? []}
+                          />
+                        </td>
                         <td>{requerimiento.periodos}</td>
                         <td>{moneda(requerimiento.importeTotal)}</td>
                         <td>{moneda(requerimiento.totalPagado)}</td>

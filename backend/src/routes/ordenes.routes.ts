@@ -1,5 +1,6 @@
 import {
   EstadoConciliacion,
+  EstadoVersionDatos,
   Prisma,
 } from "../../generated/prisma/client";
 import {
@@ -41,6 +42,238 @@ function normalizarPlacaBusqueda(
   }
 
   return valor.trim();
+}
+
+
+interface PagoSisgatConsulta {
+  id: number;
+  anioRecibo: number;
+  numeroRecibo: string;
+  monto: number;
+  trimestreOriginal: string | null;
+  estadoOriginal: string | null;
+  activo: boolean;
+}
+
+function normalizarPlacaPagosSisgat(
+  valor: string | null,
+): string {
+  return (valor ?? "")
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "");
+}
+
+function variantesPlacaPagosSisgat(
+  valor: string | null,
+): string[] {
+  const original = (valor ?? "").trim();
+
+  if (!original) {
+    return [];
+  }
+
+  const mayuscula = original.toUpperCase();
+  const normalizada =
+    normalizarPlacaPagosSisgat(original);
+
+  const formateada =
+    normalizada.length === 6
+      ? `${normalizada.slice(0, 3)}-${normalizada.slice(3)}`
+      : normalizada;
+
+  return Array.from(
+    new Set(
+      [
+        original,
+        mayuscula,
+        normalizada,
+        formateada,
+      ].filter(Boolean),
+    ),
+  );
+}
+
+async function obtenerPagosSisgatPorPlaca(
+  placas: Array<string | null>,
+): Promise<Map<string, PagoSisgatConsulta[]>> {
+  const placasConsulta = Array.from(
+    new Set(
+      placas.flatMap(
+        variantesPlacaPagosSisgat,
+      ),
+    ),
+  );
+
+  if (placasConsulta.length === 0) {
+    return new Map();
+  }
+
+  const versionPagos =
+    await prisma.versionPagosSisgat.findFirst({
+      where: {
+        estado:
+          EstadoVersionDatos.ACTIVA,
+      },
+      orderBy: {
+        fechaAplicacion: "desc",
+      },
+      select: {
+        id: true,
+      },
+    });
+
+  if (!versionPagos) {
+    return new Map();
+  }
+
+  const declaraciones =
+    await prisma.declaracion.findMany({
+      where: {
+        versionPagosSisgatId:
+          versionPagos.id,
+        OR: placasConsulta.map(
+          (placa) => ({
+            placa: {
+              equals: placa,
+              mode: "insensitive",
+            },
+          }),
+        ),
+      },
+      select: {
+        placa: true,
+        recibos: {
+          orderBy: [
+            {
+              anioRecibo: "desc",
+            },
+            {
+              numeroRecibo: "asc",
+            },
+          ],
+          select: {
+            id: true,
+            anioRecibo: true,
+            numeroRecibo: true,
+            monto: true,
+            trimestreOriginal: true,
+            estadoOriginal: true,
+            activo: true,
+          },
+        },
+      },
+    });
+
+  const recibosPorPlaca = new Map<
+    string,
+    Map<number, PagoSisgatConsulta>
+  >();
+
+  for (const declaracion of declaraciones) {
+    const placa =
+      normalizarPlacaPagosSisgat(
+        declaracion.placa,
+      );
+
+    if (!placa) {
+      continue;
+    }
+
+    const recibos =
+      recibosPorPlaca.get(placa) ??
+      new Map<
+        number,
+        PagoSisgatConsulta
+      >();
+
+    for (
+      const recibo of
+      declaracion.recibos
+    ) {
+      recibos.set(recibo.id, {
+        id: recibo.id,
+        anioRecibo:
+          recibo.anioRecibo,
+        numeroRecibo:
+          recibo.numeroRecibo,
+        monto: Number(
+          recibo.monto,
+        ),
+        trimestreOriginal:
+          recibo.trimestreOriginal,
+        estadoOriginal:
+          recibo.estadoOriginal,
+        activo: recibo.activo,
+      });
+    }
+
+    recibosPorPlaca.set(
+      placa,
+      recibos,
+    );
+  }
+
+  const resultado =
+    new Map<
+      string,
+      PagoSisgatConsulta[]
+    >();
+
+  for (
+    const [placa, recibos] of
+    recibosPorPlaca.entries()
+  ) {
+    resultado.set(
+      placa,
+      Array.from(
+        recibos.values(),
+      ).sort((a, b) => {
+        if (
+          a.activo !== b.activo
+        ) {
+          return a.activo
+            ? -1
+            : 1;
+        }
+
+        if (
+          a.anioRecibo !==
+          b.anioRecibo
+        ) {
+          return (
+            b.anioRecibo -
+            a.anioRecibo
+          );
+        }
+
+        return a.numeroRecibo.localeCompare(
+          b.numeroRecibo,
+          "es",
+        );
+      }),
+    );
+  }
+
+  return resultado;
+}
+
+function pagosSisgatDePlaca(
+  pagosPorPlaca: Map<
+    string,
+    PagoSisgatConsulta[]
+  >,
+  placa: string | null,
+): PagoSisgatConsulta[] {
+  const clave =
+    normalizarPlacaPagosSisgat(
+      placa,
+    );
+
+  return clave
+    ? pagosPorPlaca.get(clave) ??
+        []
+    : [];
 }
 
 router.get(
@@ -186,6 +419,13 @@ router.get(
           }),
         ]);
 
+      const pagosSisgatPorPlaca =
+        await obtenerPagosSisgatPorPlaca(
+          ordenes.map(
+            (orden) => orden.placa,
+          ),
+        );
+
       res.status(200).json({
         ok: true,
         data: {
@@ -203,6 +443,11 @@ router.get(
               nombre:
                 orden.nombreOriginal,
               placa: orden.placa,
+              pagosSisgat:
+                pagosSisgatDePlaca(
+                  pagosSisgatPorPlaca,
+                  orden.placa,
+                ),
               periodo:
                 orden.periodoOriginal,
               importeTotal: Number(

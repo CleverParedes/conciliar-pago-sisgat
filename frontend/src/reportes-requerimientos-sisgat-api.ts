@@ -25,6 +25,16 @@ export interface EstadoResumenRequerimientosSisgat {
   saldo: number;
 }
 
+export interface PagoSisgatReporte {
+  id: number;
+  anioRecibo: number;
+  numeroRecibo: string;
+  monto: number;
+  trimestreOriginal: string | null;
+  estadoOriginal: string | null;
+  activo: boolean;
+}
+
 export interface MuestraReporteRequerimientoSisgat {
   id: number;
   anioRequerimiento: number;
@@ -33,6 +43,7 @@ export interface MuestraReporteRequerimientoSisgat {
   dniRuc: string | null;
   nombre: string | null;
   placa: string | null;
+  pagosSisgat: PagoSisgatReporte[];
   importeTotal: number;
   totalPagado: number;
   saldo: number;

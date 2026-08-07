@@ -17,6 +17,7 @@ import type {
   OrdenResumen,
   Paginacion,
 } from "../types";
+import { PagosSisgatCelda } from "../components/PagosSisgatCelda";
 
 const ESTADOS: Array<{
   valor: EstadoConciliacion;
@@ -999,6 +1000,7 @@ function Dashboard() {
                 <th>Orden</th>
                 <th>Contribuyente</th>
                 <th>Placa</th>
+                <th>Pagos SisGAT</th>
                 <th>Periodo</th>
                 <th>Total</th>
                 <th>Pagado</th>
@@ -1012,7 +1014,7 @@ function Dashboard() {
               {cargandoOrdenes ? (
                 <tr>
                   <td
-                    colSpan={9}
+                    colSpan={10}
                     className="tabla-mensaje"
                   >
                     Cargando órdenes...
@@ -1022,7 +1024,7 @@ function Dashboard() {
                 0 ? (
                 <tr>
                   <td
-                    colSpan={9}
+                    colSpan={10}
                     className="tabla-mensaje"
                   >
                     No se encontraron
@@ -1062,6 +1064,15 @@ function Dashboard() {
                       <strong>
                         {orden.placa}
                       </strong>
+                    </td>
+
+                    <td>
+                      <PagosSisgatCelda
+                        pagos={
+                          orden.pagosSisgat ??
+                          []
+                        }
+                      />
                     </td>
 
                     <td>

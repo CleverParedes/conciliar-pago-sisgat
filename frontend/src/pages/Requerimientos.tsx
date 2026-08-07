@@ -15,6 +15,7 @@ import {
   type PaginacionRequerimientos,
   type ResumenRequerimientos,
 } from "../requerimientos-api";
+import { PagosSisgatCelda } from "../components/PagosSisgatCelda";
 import "./Requerimientos.css";
 
 const ESTADOS: Array<{
@@ -1132,6 +1133,7 @@ function Requerimientos() {
                 <th>Requerimiento</th>
                 <th>Contribuyente</th>
                 <th>Placa</th>
+                <th>Pagos SisGAT</th>
                 <th>Periodos</th>
                 <th>Importe</th>
                 <th>Pagado</th>
@@ -1146,7 +1148,7 @@ function Requerimientos() {
                 <tr>
                   <td
                     className="tabla-mensaje"
-                    colSpan={9}
+                    colSpan={10}
                   >
                     Cargando
                     requerimientos...
@@ -1157,7 +1159,7 @@ function Requerimientos() {
                 <tr>
                   <td
                     className="tabla-mensaje"
-                    colSpan={9}
+                    colSpan={10}
                   >
                     No se encontraron
                     requerimientos con los
@@ -1213,6 +1215,16 @@ function Requerimientos() {
                             .placa ??
                             "—"}
                         </strong>
+                      </td>
+
+                      <td>
+                        <PagosSisgatCelda
+                          pagos={
+                            requerimiento
+                              .pagosSisgat ??
+                            []
+                          }
+                        />
                       </td>
 
                       <td>
