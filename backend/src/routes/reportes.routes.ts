@@ -350,10 +350,12 @@ async function obtenerVersionActiva() {
 
 
 interface PagoSisgatReporte {
-  id: number;
-  anioRecibo: number;
-  numeroRecibo: string;
-  monto: number;
+  declaracionId: number;
+  anioDeclaracion: number;
+  id: number | null;
+  anioRecibo: number | null;
+  numeroRecibo: string | null;
+  monto: number | null;
   trimestreOriginal: string | null;
   estadoOriginal: string | null;
   activo: boolean;
@@ -368,26 +370,44 @@ function normalizarPlacaPagosSisgat(
     .replace(/[^A-Z0-9]/g, "");
 }
 
+function variantesPlacaPagosSisgat(
+  valor: string | null,
+): string[] {
+  const original = (valor ?? "").trim();
+
+  if (!original) {
+    return [];
+  }
+
+  const mayuscula = original.toUpperCase();
+  const normalizada =
+    normalizarPlacaPagosSisgat(original);
+
+  const formateada =
+    normalizada.length === 6
+      ? `${normalizada.slice(0, 3)}-${normalizada.slice(3)}`
+      : normalizada;
+
+  return Array.from(
+    new Set(
+      [
+        original,
+        mayuscula,
+        normalizada,
+        formateada,
+      ].filter(Boolean),
+    ),
+  );
+}
+
 async function obtenerPagosSisgatPorPlaca(
   placas: Array<string | null>,
 ): Promise<Map<string, PagoSisgatReporte[]>> {
   const placasConsulta = Array.from(
     new Set(
-      placas
-        .flatMap((placa) => {
-          const original = placa?.trim();
-
-          if (!original) {
-            return [];
-          }
-
-          return [
-            original,
-            original.toUpperCase(),
-            normalizarPlacaPagosSisgat(original),
-          ];
-        })
-        .filter(Boolean),
+      placas.flatMap(
+        variantesPlacaPagosSisgat,
+      ),
     ),
   );
 
@@ -395,97 +415,176 @@ async function obtenerPagosSisgatPorPlaca(
     return new Map();
   }
 
-  const versionPagos = await prisma.versionPagosSisgat.findFirst({
-    where: {
-      estado: EstadoVersionDatos.ACTIVA,
-    },
-    orderBy: {
-      fechaAplicacion: "desc",
-    },
-    select: {
-      id: true,
-    },
-  });
+  const versionPagos =
+    await prisma.versionPagosSisgat.findFirst({
+      where: {
+        estado:
+          EstadoVersionDatos.ACTIVA,
+      },
+      orderBy: {
+        fechaAplicacion: "desc",
+      },
+      select: {
+        id: true,
+      },
+    });
 
   if (!versionPagos) {
     return new Map();
   }
 
-  const declaraciones = await prisma.declaracion.findMany({
-    where: {
-      versionPagosSisgatId: versionPagos.id,
-      placa: {
-        in: placasConsulta,
+  const declaraciones =
+    await prisma.declaracion.findMany({
+      where: {
+        versionPagosSisgatId:
+          versionPagos.id,
+        OR: placasConsulta.map(
+          (placa) => ({
+            placa: {
+              equals: placa,
+              mode: "insensitive",
+            },
+          }),
+        ),
       },
-    },
-    select: {
-      placa: true,
-      recibos: {
-        orderBy: [
-          {
-            anioRecibo: "desc",
+      select: {
+        id: true,
+        anioDeclaracion: true,
+        placa: true,
+        recibos: {
+          orderBy: [
+            {
+              anioRecibo: "desc",
+            },
+            {
+              numeroRecibo: "asc",
+            },
+          ],
+          select: {
+            id: true,
+            anioRecibo: true,
+            numeroRecibo: true,
+            monto: true,
+            trimestreOriginal: true,
+            estadoOriginal: true,
+            activo: true,
           },
-          {
-            numeroRecibo: "asc",
-          },
-        ],
-        select: {
-          id: true,
-          anioRecibo: true,
-          numeroRecibo: true,
-          monto: true,
-          trimestreOriginal: true,
-          estadoOriginal: true,
-          activo: true,
         },
       },
-    },
-  });
+    });
 
-  const recibosPorPlaca = new Map<
+  const registrosPorPlaca = new Map<
     string,
-    Map<number, PagoSisgatReporte>
+    Map<string, PagoSisgatReporte>
   >();
 
   for (const declaracion of declaraciones) {
-    const placa = normalizarPlacaPagosSisgat(declaracion.placa);
+    const placa =
+      normalizarPlacaPagosSisgat(
+        declaracion.placa,
+      );
 
     if (!placa) {
       continue;
     }
 
-    const recibos = recibosPorPlaca.get(placa) ?? new Map();
+    const registros =
+      registrosPorPlaca.get(placa) ??
+      new Map<
+        string,
+        PagoSisgatReporte
+      >();
 
-    for (const recibo of declaracion.recibos) {
-      recibos.set(recibo.id, {
-        id: recibo.id,
-        anioRecibo: recibo.anioRecibo,
-        numeroRecibo: recibo.numeroRecibo,
-        monto: Number(recibo.monto),
-        trimestreOriginal: recibo.trimestreOriginal,
-        estadoOriginal: recibo.estadoOriginal,
-        activo: recibo.activo,
-      });
+    if (declaracion.recibos.length === 0) {
+      registros.set(
+        `D:${declaracion.id}`,
+        {
+          declaracionId:
+            declaracion.id,
+          anioDeclaracion:
+            declaracion.anioDeclaracion,
+          id: null,
+          anioRecibo: null,
+          numeroRecibo: null,
+          monto: null,
+          trimestreOriginal: null,
+          estadoOriginal: null,
+          activo: false,
+        },
+      );
     }
 
-    recibosPorPlaca.set(placa, recibos);
+    for (
+      const recibo of
+      declaracion.recibos
+    ) {
+      registros.set(
+        `R:${recibo.id}`,
+        {
+          declaracionId:
+            declaracion.id,
+          anioDeclaracion:
+            declaracion.anioDeclaracion,
+          id: recibo.id,
+          anioRecibo:
+            recibo.anioRecibo,
+          numeroRecibo:
+            recibo.numeroRecibo,
+          monto: Number(
+            recibo.monto,
+          ),
+          trimestreOriginal:
+            recibo.trimestreOriginal,
+          estadoOriginal:
+            recibo.estadoOriginal,
+          activo: recibo.activo,
+        },
+      );
+    }
+
+    registrosPorPlaca.set(
+      placa,
+      registros,
+    );
   }
 
-  const resultado = new Map<string, PagoSisgatReporte[]>();
+  const resultado =
+    new Map<
+      string,
+      PagoSisgatReporte[]
+    >();
 
-  for (const [placa, recibos] of recibosPorPlaca.entries()) {
+  for (
+    const [placa, registros] of
+    registrosPorPlaca.entries()
+  ) {
     resultado.set(
       placa,
-      Array.from(recibos.values()).sort((a, b) => {
+      Array.from(
+        registros.values(),
+      ).sort((a, b) => {
+        if (
+          a.anioDeclaracion !==
+          b.anioDeclaracion
+        ) {
+          return (
+            a.anioDeclaracion -
+            b.anioDeclaracion
+          );
+        }
+
         if (a.activo !== b.activo) {
-          return a.activo ? -1 : 1;
+          return a.activo
+            ? -1
+            : 1;
         }
 
-        if (a.anioRecibo !== b.anioRecibo) {
-          return b.anioRecibo - a.anioRecibo;
-        }
-
-        return a.numeroRecibo.localeCompare(b.numeroRecibo, "es");
+        return (
+          a.numeroRecibo ?? ""
+        ).localeCompare(
+          b.numeroRecibo ?? "",
+          "es",
+        );
       }),
     );
   }
@@ -494,31 +593,207 @@ async function obtenerPagosSisgatPorPlaca(
 }
 
 function pagosSisgatDePlaca(
-  pagosPorPlaca: Map<string, PagoSisgatReporte[]>,
+  pagosPorPlaca: Map<
+    string,
+    PagoSisgatReporte[]
+  >,
   placa: string | null,
 ): PagoSisgatReporte[] {
-  const clave = normalizarPlacaPagosSisgat(placa);
-  return clave ? pagosPorPlaca.get(clave) ?? [] : [];
+  const clave =
+    normalizarPlacaPagosSisgat(
+      placa,
+    );
+
+  return clave
+    ? pagosPorPlaca.get(clave) ??
+        []
+    : [];
+}
+
+function extraerTrimestresPagosSisgat(
+  valor: string | null,
+): number[] {
+  if (!valor) {
+    return [];
+  }
+
+  const encontrados =
+    new Set<number>();
+  const texto = valor.trim();
+
+  for (
+    const coincidencia of
+    texto.matchAll(
+      /([1-4])\s*[-–—]\s*([1-4])/g,
+    )
+  ) {
+    const inicio = Number(
+      coincidencia[1],
+    );
+    const fin = Number(
+      coincidencia[2],
+    );
+    const desde = Math.min(
+      inicio,
+      fin,
+    );
+    const hasta = Math.max(
+      inicio,
+      fin,
+    );
+
+    for (
+      let trimestre = desde;
+      trimestre <= hasta;
+      trimestre += 1
+    ) {
+      encontrados.add(
+        trimestre,
+      );
+    }
+  }
+
+  for (
+    const coincidencia of
+    texto.matchAll(
+      /(?:^|\D)([1-4])(?=\D|$)/g,
+    )
+  ) {
+    encontrados.add(
+      Number(
+        coincidencia[1],
+      ),
+    );
+  }
+
+  return Array.from(
+    encontrados,
+  ).sort(
+    (a, b) => a - b,
+  );
+}
+
+function resumirTrimestresPagosSisgat(
+  trimestres: Set<number>,
+): string {
+  const valores =
+    Array.from(
+      trimestres,
+    ).sort(
+      (a, b) => a - b,
+    );
+
+  if (valores.length === 0) {
+    return "";
+  }
+
+  const segmentos: string[] = [];
+  let inicio = valores[0];
+  let anterior = valores[0];
+
+  for (
+    let indice = 1;
+    indice < valores.length;
+    indice += 1
+  ) {
+    const actual =
+      valores[indice];
+
+    if (
+      actual === anterior + 1
+    ) {
+      anterior = actual;
+      continue;
+    }
+
+    segmentos.push(
+      inicio === anterior
+        ? String(inicio)
+        : `${inicio}-${anterior}`,
+    );
+
+    inicio = actual;
+    anterior = actual;
+  }
+
+  segmentos.push(
+    inicio === anterior
+      ? String(inicio)
+      : `${inicio}-${anterior}`,
+  );
+
+  return segmentos.join(",");
 }
 
 function textoPagosSisgatExcel(
   pagos: PagoSisgatReporte[],
 ): string {
   if (pagos.length === 0) {
-    return "Sin pagos SisGAT";
+    return "Sin datos SisGAT";
   }
 
-  return pagos
-    .map((pago) => {
-      const estado = pago.activo ? "ACTIVO" : "NO ACTIVO";
-      const trimestre = pago.trimestreOriginal ?? "Sin trimestre";
-      const estadoOriginal = pago.estadoOriginal
-        ? ` | ${pago.estadoOriginal}`
-        : "";
+  const coberturaPorAnio =
+    new Map<
+      number,
+      Set<number>
+    >();
 
-      return `${estado} | ${pago.anioRecibo}-${pago.numeroRecibo} | ${trimestre} | S/ ${pago.monto.toFixed(2)}${estadoOriginal}`;
-    })
-    .join("\n");
+  for (const pago of pagos) {
+    if (
+      !Number.isInteger(
+        pago.anioDeclaracion,
+      )
+    ) {
+      continue;
+    }
+
+    const cobertura =
+      coberturaPorAnio.get(
+        pago.anioDeclaracion,
+      ) ??
+      new Set<number>();
+
+    if (pago.activo) {
+      for (
+        const trimestre of
+        extraerTrimestresPagosSisgat(
+          pago.trimestreOriginal,
+        )
+      ) {
+        cobertura.add(
+          trimestre,
+        );
+      }
+    }
+
+    coberturaPorAnio.set(
+      pago.anioDeclaracion,
+      cobertura,
+    );
+  }
+
+  if (
+    coberturaPorAnio.size === 0
+  ) {
+    return "Sin datos SisGAT";
+  }
+
+  return Array.from(
+    coberturaPorAnio.entries(),
+  )
+    .sort(
+      ([anioA], [anioB]) =>
+        anioA - anioB,
+    )
+    .map(
+      ([anio, trimestres]) =>
+        trimestres.size > 0
+          ? `${anio} [${resumirTrimestresPagosSisgat(
+              trimestres,
+            )}]`
+          : `${anio} [NO HAY PAGOS]`,
+    )
+    .join(" · ");
 }
 
 async function consultarReporte(

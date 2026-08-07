@@ -43,10 +43,12 @@ function normalizarPlacaBusqueda(
 
 
 interface PagoSisgatConsulta {
-  id: number;
-  anioRecibo: number;
-  numeroRecibo: string;
-  monto: number;
+  declaracionId: number;
+  anioDeclaracion: number;
+  id: number | null;
+  anioRecibo: number | null;
+  numeroRecibo: string | null;
+  monto: number | null;
   trimestreOriginal: string | null;
   estadoOriginal: string | null;
   activo: boolean;
@@ -139,6 +141,8 @@ async function obtenerPagosSisgatPorPlaca(
         ),
       },
       select: {
+        id: true,
+        anioDeclaracion: true,
         placa: true,
         recibos: {
           orderBy: [
@@ -162,9 +166,9 @@ async function obtenerPagosSisgatPorPlaca(
       },
     });
 
-  const recibosPorPlaca = new Map<
+  const registrosPorPlaca = new Map<
     string,
-    Map<number, PagoSisgatConsulta>
+    Map<string, PagoSisgatConsulta>
   >();
 
   for (const declaracion of declaraciones) {
@@ -177,37 +181,63 @@ async function obtenerPagosSisgatPorPlaca(
       continue;
     }
 
-    const recibos =
-      recibosPorPlaca.get(placa) ??
+    const registros =
+      registrosPorPlaca.get(placa) ??
       new Map<
-        number,
+        string,
         PagoSisgatConsulta
       >();
+
+    if (declaracion.recibos.length === 0) {
+      registros.set(
+        `D:${declaracion.id}`,
+        {
+          declaracionId:
+            declaracion.id,
+          anioDeclaracion:
+            declaracion.anioDeclaracion,
+          id: null,
+          anioRecibo: null,
+          numeroRecibo: null,
+          monto: null,
+          trimestreOriginal: null,
+          estadoOriginal: null,
+          activo: false,
+        },
+      );
+    }
 
     for (
       const recibo of
       declaracion.recibos
     ) {
-      recibos.set(recibo.id, {
-        id: recibo.id,
-        anioRecibo:
-          recibo.anioRecibo,
-        numeroRecibo:
-          recibo.numeroRecibo,
-        monto: Number(
-          recibo.monto,
-        ),
-        trimestreOriginal:
-          recibo.trimestreOriginal,
-        estadoOriginal:
-          recibo.estadoOriginal,
-        activo: recibo.activo,
-      });
+      registros.set(
+        `R:${recibo.id}`,
+        {
+          declaracionId:
+            declaracion.id,
+          anioDeclaracion:
+            declaracion.anioDeclaracion,
+          id: recibo.id,
+          anioRecibo:
+            recibo.anioRecibo,
+          numeroRecibo:
+            recibo.numeroRecibo,
+          monto: Number(
+            recibo.monto,
+          ),
+          trimestreOriginal:
+            recibo.trimestreOriginal,
+          estadoOriginal:
+            recibo.estadoOriginal,
+          activo: recibo.activo,
+        },
+      );
     }
 
-    recibosPorPlaca.set(
+    registrosPorPlaca.set(
       placa,
-      recibos,
+      registros,
     );
   }
 
@@ -218,34 +248,34 @@ async function obtenerPagosSisgatPorPlaca(
     >();
 
   for (
-    const [placa, recibos] of
-    recibosPorPlaca.entries()
+    const [placa, registros] of
+    registrosPorPlaca.entries()
   ) {
     resultado.set(
       placa,
       Array.from(
-        recibos.values(),
+        registros.values(),
       ).sort((a, b) => {
         if (
-          a.activo !== b.activo
+          a.anioDeclaracion !==
+          b.anioDeclaracion
         ) {
+          return (
+            a.anioDeclaracion -
+            b.anioDeclaracion
+          );
+        }
+
+        if (a.activo !== b.activo) {
           return a.activo
             ? -1
             : 1;
         }
 
-        if (
-          a.anioRecibo !==
-          b.anioRecibo
-        ) {
-          return (
-            b.anioRecibo -
-            a.anioRecibo
-          );
-        }
-
-        return a.numeroRecibo.localeCompare(
-          b.numeroRecibo,
+        return (
+          a.numeroRecibo ?? ""
+        ).localeCompare(
+          b.numeroRecibo ?? "",
           "es",
         );
       }),

@@ -29,10 +29,12 @@ export interface ResumenEstadoReporteOrdenes {
 }
 
 export interface PagoSisgatReporte {
-  id: number;
-  anioRecibo: number;
-  numeroRecibo: string;
-  monto: number;
+  declaracionId: number;
+  anioDeclaracion: number;
+  id: number | null;
+  anioRecibo: number | null;
+  numeroRecibo: string | null;
+  monto: number | null;
   trimestreOriginal: string | null;
   estadoOriginal: string | null;
   activo: boolean;

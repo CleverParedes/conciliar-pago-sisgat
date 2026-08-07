@@ -1,10 +1,12 @@
 import "./PagosSisgatCelda.css";
 
 export interface PagoSisgatVisual {
-  id: number;
-  anioRecibo: number;
-  numeroRecibo: string;
-  monto: number;
+  declaracionId: number;
+  anioDeclaracion: number;
+  id: number | null;
+  anioRecibo: number | null;
+  numeroRecibo: string | null;
+  monto: number | null;
   trimestreOriginal: string | null;
   estadoOriginal: string | null;
   activo: boolean;
@@ -20,34 +22,73 @@ interface CoberturaAnual {
   etiquetasSinConvertir: Set<string>;
 }
 
-function extraerTrimestres(valor: string | null): number[] {
+function extraerTrimestres(
+  valor: string | null,
+): number[] {
   if (!valor) {
     return [];
   }
 
-  const encontrados = new Set<number>();
+  const encontrados =
+    new Set<number>();
   const texto = valor.trim();
 
-  for (const coincidencia of texto.matchAll(/([1-4])\s*[-–—]\s*([1-4])/g)) {
-    const inicio = Number(coincidencia[1]);
-    const fin = Number(coincidencia[2]);
-    const desde = Math.min(inicio, fin);
-    const hasta = Math.max(inicio, fin);
+  for (
+    const coincidencia of
+    texto.matchAll(
+      /([1-4])\s*[-–—]\s*([1-4])/g,
+    )
+  ) {
+    const inicio = Number(
+      coincidencia[1],
+    );
+    const fin = Number(
+      coincidencia[2],
+    );
+    const desde = Math.min(
+      inicio,
+      fin,
+    );
+    const hasta = Math.max(
+      inicio,
+      fin,
+    );
 
-    for (let trimestre = desde; trimestre <= hasta; trimestre += 1) {
-      encontrados.add(trimestre);
+    for (
+      let trimestre = desde;
+      trimestre <= hasta;
+      trimestre += 1
+    ) {
+      encontrados.add(
+        trimestre,
+      );
     }
   }
 
-  for (const coincidencia of texto.matchAll(/(?:^|\D)([1-4])(?=\D|$)/g)) {
-    encontrados.add(Number(coincidencia[1]));
+  for (
+    const coincidencia of
+    texto.matchAll(
+      /(?:^|\D)([1-4])(?=\D|$)/g,
+    )
+  ) {
+    encontrados.add(
+      Number(
+        coincidencia[1],
+      ),
+    );
   }
 
-  return [...encontrados].sort((a, b) => a - b);
+  return [...encontrados].sort(
+    (a, b) => a - b,
+  );
 }
 
-function resumirTrimestres(trimestres: Iterable<number>): string {
-  const valores = [...new Set([...trimestres])]
+function resumirTrimestres(
+  trimestres: Iterable<number>,
+): string {
+  const valores = [
+    ...new Set([...trimestres]),
+  ]
     .filter(
       (valor) =>
         Number.isInteger(valor) &&
@@ -64,7 +105,11 @@ function resumirTrimestres(trimestres: Iterable<number>): string {
   let inicio = valores[0];
   let anterior = valores[0];
 
-  for (let indice = 1; indice < valores.length; indice += 1) {
+  for (
+    let indice = 1;
+    indice < valores.length;
+    indice += 1
+  ) {
     const actual = valores[indice];
 
     if (actual === anterior + 1) {
@@ -73,7 +118,9 @@ function resumirTrimestres(trimestres: Iterable<number>): string {
     }
 
     segmentos.push(
-      inicio === anterior ? String(inicio) : `${inicio}-${anterior}`,
+      inicio === anterior
+        ? String(inicio)
+        : `${inicio}-${anterior}`,
     );
 
     inicio = actual;
@@ -81,13 +128,17 @@ function resumirTrimestres(trimestres: Iterable<number>): string {
   }
 
   segmentos.push(
-    inicio === anterior ? String(inicio) : `${inicio}-${anterior}`,
+    inicio === anterior
+      ? String(inicio)
+      : `${inicio}-${anterior}`,
   );
 
   return segmentos.join(",");
 }
 
-function limpiarEtiquetaOriginal(valor: string | null): string | null {
+function limpiarEtiquetaOriginal(
+  valor: string | null,
+): string | null {
   const texto = valor
     ?.trim()
     .replace(/^\[\s*/, "")
@@ -97,59 +148,117 @@ function limpiarEtiquetaOriginal(valor: string | null): string | null {
   return texto || null;
 }
 
-function construirHistorial(pagos: PagoSisgatVisual[]): string {
-  const coberturas = new Map<number, CoberturaAnual>();
+function construirHistorial(
+  pagos: PagoSisgatVisual[],
+): string {
+  const coberturas =
+    new Map<number, CoberturaAnual>();
 
   for (const pago of pagos) {
-    if (!pago.activo || !Number.isInteger(pago.anioRecibo)) {
+    if (
+      !Number.isInteger(
+        pago.anioDeclaracion,
+      )
+    ) {
       continue;
     }
 
-    let cobertura = coberturas.get(pago.anioRecibo);
+    let cobertura =
+      coberturas.get(
+        pago.anioDeclaracion,
+      );
 
     if (!cobertura) {
       cobertura = {
-        anio: pago.anioRecibo,
-        trimestres: new Set<number>(),
-        etiquetasSinConvertir: new Set<string>(),
+        anio:
+          pago.anioDeclaracion,
+        trimestres:
+          new Set<number>(),
+        etiquetasSinConvertir:
+          new Set<string>(),
       };
-      coberturas.set(pago.anioRecibo, cobertura);
+
+      coberturas.set(
+        pago.anioDeclaracion,
+        cobertura,
+      );
     }
 
-    const trimestres = extraerTrimestres(pago.trimestreOriginal);
+    if (!pago.activo) {
+      continue;
+    }
+
+    const trimestres =
+      extraerTrimestres(
+        pago.trimestreOriginal,
+      );
 
     if (trimestres.length > 0) {
-      for (const trimestre of trimestres) {
-        cobertura.trimestres.add(trimestre);
+      for (
+        const trimestre of
+        trimestres
+      ) {
+        cobertura.trimestres.add(
+          trimestre,
+        );
       }
     } else {
-      const etiqueta = limpiarEtiquetaOriginal(pago.trimestreOriginal);
+      const etiqueta =
+        limpiarEtiquetaOriginal(
+          pago.trimestreOriginal,
+        );
 
       if (etiqueta) {
-        cobertura.etiquetasSinConvertir.add(etiqueta);
+        cobertura
+          .etiquetasSinConvertir
+          .add(etiqueta);
       }
     }
   }
 
   if (coberturas.size === 0) {
-    return "Sin pagos activos";
+    return "Sin datos SisGAT";
   }
 
-  return [...coberturas.values()]
-    .sort((a, b) => a.anio - b.anio)
+  return [
+    ...coberturas.values(),
+  ]
+    .sort(
+      (a, b) => a.anio - b.anio,
+    )
     .map((cobertura) => {
-      const periodo =
-        cobertura.trimestres.size > 0
-          ? resumirTrimestres(cobertura.trimestres)
-          : [...cobertura.etiquetasSinConvertir].join(", ") || "—";
+      if (
+        cobertura.trimestres.size >
+        0
+      ) {
+        return `${cobertura.anio} [${resumirTrimestres(
+          cobertura.trimestres,
+        )}]`;
+      }
 
-      return `${cobertura.anio} [${periodo}]`;
+      if (
+        cobertura
+          .etiquetasSinConvertir
+          .size > 0
+      ) {
+        return `${cobertura.anio} [${[
+          ...cobertura
+            .etiquetasSinConvertir,
+        ].join(", ")}]`;
+      }
+
+      return `${cobertura.anio} [no hay pagos]`;
     })
     .join(" · ");
 }
 
-function textoCantidad(cantidad: number, singular: string): string {
-  return `${cantidad} ${singular}${cantidad === 1 ? "" : "s"}`;
+function textoCantidad(
+  cantidad: number,
+  singular: string,
+): string {
+  return `${cantidad} ${singular}${
+    cantidad === 1 ? "" : "s"
+  }`;
 }
 
 export function PagosSisgatCelda({
@@ -158,14 +267,20 @@ export function PagosSisgatCelda({
   if (pagos.length === 0) {
     return (
       <span className="pagos-sisgat-vacio">
-        Sin pagos SisGAT
+        Sin datos SisGAT
       </span>
     );
   }
 
-  const activos = pagos.filter((pago) => pago.activo);
-  const noActivos = pagos.length - activos.length;
-  const historial = construirHistorial(pagos);
+  const noActivos =
+    pagos.filter(
+      (pago) =>
+        pago.id !== null &&
+        !pago.activo,
+    ).length;
+
+  const historial =
+    construirHistorial(pagos);
 
   return (
     <div className="pagos-sisgat-celda">
@@ -173,7 +288,10 @@ export function PagosSisgatCelda({
 
       {noActivos > 0 ? (
         <small>
-          {textoCantidad(noActivos, "recibo no activo")}
+          {textoCantidad(
+            noActivos,
+            "recibo no activo",
+          )}
         </small>
       ) : null}
     </div>
